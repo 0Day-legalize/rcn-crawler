@@ -23,7 +23,23 @@ const path = require("node:path");
 
 const filePath = path.join(__dirname, "urls.txt");
 const file_content = fs.readFileSync(filePath, "utf-8");
-const line = file_content.split("\n");
-line.trim()
 
-console.log(line);
+function cleanurl(fileContent){
+    const result = []
+    const lines = fileContent.split("\n");
+
+    for (const l of lines){
+        const cleaned = l.trim()
+        if(!cleaned) continue;
+        result.push(cleaned)
+    }
+    return {
+        result,
+        count: result.length
+    }
+}
+
+const data = cleanurl(file_content);
+
+console.log("URLs:", data.result);
+console.log("Count:", data.count);

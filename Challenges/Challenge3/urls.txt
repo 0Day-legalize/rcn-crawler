@@ -1,2 +1,4 @@
-https://crawler-test.com/
-https://www.onely.com/blog/ultimate-guide-seo-crawlers/
+https://example.com
+https://example.com/about
+
+https://google.com
