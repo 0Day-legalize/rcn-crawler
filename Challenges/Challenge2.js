@@ -31,15 +31,6 @@ url.toString()
 const seen = new Set();
 seen.add(value);
 
-
-// Input URLs
-const urls = [
-  "https://EXAMPLE.com/page#section",
-  "https://example.com/page",
-  "https://example.com/page#other",
-  "https://example.com/other"
-];
-
 // Normalize function
 function normalizeUrl(input) {
   const url = new URL(input);
