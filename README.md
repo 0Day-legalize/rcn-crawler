@@ -1,5 +1,13 @@
-<img src="https://readme-typing-svg.herokuapp.com?color=00FF00&size=30&center=true&vCenter=true&width=600&lines=WebCrawler;Darkweb+Crawler;RCN+Crawler" />
+![WebCrawler Logo](./assets/logo.png)
+<p align="center">
+  <img src="./assets/logo.png" width="300">
+</p>
 
+<h1 align="center">🕷️ RCN WebCrawler</h1>
+
+<p align="center">
+Dark Web Crawler • Onion Support • Queue-Based Engine
+</p>
 ___
 # 🕷️ RCN - WebCrawler (Tor-enabled)
 
