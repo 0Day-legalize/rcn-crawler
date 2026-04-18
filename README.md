@@ -1,122 +1,166 @@
-<p align="center">
-  <img src="./assets/logo.png" width="400">
-</p>
-
-<h1 align="center">🕷️ RCN WebCrawler</h1>
+# 🕷️ RCN WebCrawler
 
 <p align="center">
-Dark Web Crawler • Onion Support • Queue-Based Engine
+  <img src="./assets/logo.png" width="320">
+</p>
+
+<p align="center">
+  Dark Web Crawler • Onion Support • Queue Engine
 </p>
 
 ---
-A Node.js crawler that supports:
-- 🌐 Normal websites  
-- 🧅 `.onion` (dark web) sites via Tor  
-- 🔁 Queue-based crawling with duplicate avoidance  
+
+## 🚀 Features
+
+- 🌐 Crawl standard websites  
+- 🧅 Full `.onion` support via Tor  
+- 🔁 Queue-based crawling (no duplicates)  
+- ⚡ Fast parsing with Axios + Cheerio  
 
 ---
 
-## 🧠 Overview
+## 🧠 Architecture
 
+```
+Crawler → Tor (SOCKS5) → Internet / Onion Network
+```
 
-Node.js crawler → SOCKS5 (Tor) → Internet / Onion network
-
+- Routes traffic through Tor for anonymity  
+- Parses HTML and extracts links  
+- Tracks visited URLs to avoid loops  
 
 ---
 
-# ⚙️ Prerequisites
+## ⚙️ Setup
 
-## 1. Node.js
-
-Install **Node.js (LTS)**
-
-Verify installation:
+### 1. Install Node.js (LTS)
 
 ```bash
 node -v
 npm -v
+```
 
-___
-2. Install Required Packages
+---
+
+### 2. Install Dependencies
+
+```bash
 npm install axios cheerio socks-proxy-agent
+```
 
-___
-3. Project Structure
-/project-folder
-  ├── RCNCrawler.js
-  ├── urls.txt
-  └── package.json
-___
-4. Input File (urls.txt)
+---
 
-Create a file named urls.txt in the same directory as your script.
+## 📁 Structure
 
-Example:
+```
+/project
+ ├── RCNCrawler.js
+ ├── urls.txt
+ └── package.json
+```
+
+---
+
+## 📄 Input (`urls.txt`)
+
+```txt
 https://example.com
 http://exampleonionaddress.onion/
+```
 
-Rules:
-One URL per line
-Must include http:// or https://
-No commas or quotes
+**Rules**
+- One URL per line  
+- Must include protocol (`http://` or `https://`)  
+- No commas or quotes  
 
-___
-🧅 Tor Setup (Required for .onion)
-🪟 Windows
-___
-Step 1: Download Tor
+---
 
-Download Tor Expert Bundle (x86_64 stable)
+## 🧅 Tor Setup
 
-___
-Step 2: Extract
+### 🪟 Windows
+
+```
+# Extract Tor to:
 C:\tor
 
-___
-Step 3: Create config (torrc)
-
-Path:
+# Create config:
 C:\tor\torrc
+```
 
-Content:
+**torrc**
+```
 SocksPort 127.0.0.1:9050
 DataDirectory C:\tor\data
-___
-Step 4: Create data folder
-C:\tor\data
-___
-Step 5: Start Tor
+```
+
+```
+# Start Tor
 cd C:\tor
 .\tor.exe -f .\torrc
+```
 
-Wait until:
+Wait for:
+```
 Bootstrapped 100% (done)
+```
 
-___
-🐧 Linux
-Install Tor
+---
+
+### 🐧 Linux
+
+```bash
 sudo apt update
 sudo apt install tor
-Start Tor
+
 sudo systemctl start tor
 sudo systemctl enable tor
+```
 
-___
-🔌 Verify Tor is Running
-Windows
+---
+
+## 🔌 Verify Tor
+
+**Windows**
+```powershell
 Test-NetConnection 127.0.0.1 -Port 9050
+```
 
-___
-Linux
+**Linux**
+```bash
 ss -tulnp | grep 9050
+```
+
 Expected:
+```
 Port 9050 is open
+```
 
-___
-⚙️ Proxy Requirement (IMPORTANT)
-Your code must include:
+---
+
+## ⚠️ Proxy (Critical)
+
+```js
 const agent = new SocksProxyAgent("socks5h://127.0.0.1:9050");
+```
 
-⚠️ Important:
-Use socks5h (NOT socks5)
-Required for .onion DNS resolution
+### Why `socks5h`?
+
+- ✅ DNS via Tor → required for `.onion`  
+- ❌ `socks5` leaks DNS outside Tor  
+
+---
+
+## 🛠️ Notes
+
+- `.onion` requires Tor — won’t work otherwise  
+- Crawling is slower due to Tor routing  
+- Some sites block bots or rate-limit  
+
+---
+
+## 📌 Roadmap
+
+- [ ] Depth limiting  
+- [ ] Concurrency control  
+- [ ] Output (JSON / CSV)  
+- [ ] Retry & error handling  
