@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./assets/logo.png" width="200">
+  <img src="./assets/logo.png" width="400">
 </p>
 
 <h1 align="center">🕷️ RCN WebCrawler</h1>
@@ -7,6 +7,7 @@
 <p align="center">
 Dark Web Crawler • Onion Support • Queue-Based Engine
 </p>
+
 ___
 # 🕷️ RCN - WebCrawler (Tor-enabled)
 
