@@ -1,6 +1,5 @@
-![WebCrawler Logo](./assets/logo.png)
 <p align="center">
-  <img src="./assets/logo.png" width="300">
+  <img src="./assets/logo.png" width="200">
 </p>
 
 <h1 align="center">🕷️ RCN WebCrawler</h1>
