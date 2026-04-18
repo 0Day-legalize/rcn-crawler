@@ -1,10 +1,13 @@
+<img src="https://readme-typing-svg.herokuapp.com?color=00FF00&size=30&center=true&vCenter=true&width=600&lines=WebCrawler;Darkweb+Crawler;RCN+Crawler" />
+
+___
 # 🕷️ RCN - WebCrawler (Tor-enabled)
 
 A Node.js crawler that supports:
 - 🌐 Normal websites  
 - 🧅 `.onion` (dark web) sites via Tor  
 - 🔁 Queue-based crawling with duplicate avoidance  
-<img src="https://readme-typing-svg.herokuapp.com?color=00FF00&size=30&center=true&vCenter=true&width=600&lines=WebCrawler;Darkweb+Crawler;RCN+Crawler" />
+
 ---
 
 ## 🧠 Overview
