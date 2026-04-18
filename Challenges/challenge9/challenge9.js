@@ -217,7 +217,6 @@ async function processQueue(queue, torAgent) {
                     console.log(link);
                 }
             }
-
             enqueueSameDomainLinks(links, queue, visited, queued, baseHost);
         }
 
