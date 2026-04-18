@@ -8,9 +8,7 @@
 Dark Web Crawler • Onion Support • Queue-Based Engine
 </p>
 
-___
-# 🕷️ RCN - WebCrawler (Tor-enabled)
-
+---
 A Node.js crawler that supports:
 - 🌐 Normal websites  
 - 🧅 `.onion` (dark web) sites via Tor  
