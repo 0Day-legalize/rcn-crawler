@@ -29,20 +29,6 @@ Output >> results.json + unique-links.json
 
 ---
 
-## ⚙️ Configuration
-
-You can configure crawler behavior in:
-
-### Example
-
-```js
-const MAX_PAGES = 20;     // Maximum pages to crawl
-const DELAY_MS = 1000;    // Delay between requests (ms) to make it more natural
-const TIMEOUT_MS = 8000;  // Request timeout (max wait time on fetch)
-``` 
-
----
-
 ## 🚀 Features
 
 * 🌐 Crawl standard websites
