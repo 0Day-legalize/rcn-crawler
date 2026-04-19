@@ -234,11 +234,12 @@ rcn-crawler/
 
 ## 📌 Roadmap
 
-* Depth limiting
-* Concurrency (parallel crawling)
-* Output (JSON / CSV)
-* Retry & error handling
-* Tor identity rotation
+* Multi-domain crawling
+* External configuration support
+* Structured result export
+* Command-line arguments
+* Docker support
+* Kata-friendly runtime notes
 
 ---
 
