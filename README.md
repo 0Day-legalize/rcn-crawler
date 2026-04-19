@@ -233,4 +233,7 @@ Do not use it to crawl systems without permission.
 
 ## 👨‍💻 Author
 
-RCN
+<p align="center">
+  <b><a href="https://github.com/0Day-legalize">RCN</a></b><br>
+  <sub>Cybersecurity • Web Crawling • Tor Research</sub>
+</p>
