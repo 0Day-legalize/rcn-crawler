@@ -192,9 +192,22 @@ CLI flags override these defaults.
 Examples:
 
 ```bash
-node src/main.js --max-pages=50
-node src/main.js --delay=500 --timeout=10000
-node src/main.js --debug=false
+const DEBUG_LINKS = false;
+const MAX_PAGES = 100;              // max successful pages to crawl
+const DELAY_MS = 1000;              // delay between requests
+const TIMEOUT_MS = 8000;            // request timeout
+
+const MAX_CONCURRENT_DOMAINS = 2;   // parallel domains
+const MAX_CONCURRENT_REQUESTS = 2;  // parallel requests per domain
+
+const MAX_LINKS_PER_PAGE = 500;     // limit links extracted per page
+const MAX_HREF_LENGTH = 2048;       // max length of href
+
+const MAX_COMPRESSED_BYTES = 2 * 1024 * 1024; // 2MB safety limits against “compression bombs”
+const MAX_RESPONSE_SIZE = 5 * 1024 * 1024;    // 5MB safety limits against “compression bombs”
+
+const VISITED_SAVE_INTERVAL = 10;   // batch writes to visited.json
+
 ```
 
 Show available options:
