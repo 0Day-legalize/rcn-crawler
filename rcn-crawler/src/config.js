@@ -1,4 +1,3 @@
-// ---------- CLI HELP ----------
 function showHelp() {
     console.log(`
 🕷️ RCN WebCrawler
@@ -7,15 +6,18 @@ Usage:
     node src/main.js [options]
 
 Options:
-    --max-pages=NUMBER    Max pages to crawl (default: 20)
-    --delay=MS            Delay between requests (default: 1000)
-    --timeout=MS          Request timeout (default: 8000)
-    --debug=true|false    Show extracted links (default: true)
-    --help                Show this help message
+    --max-pages=NUMBER              Max pages to crawl (default: 20)
+    --delay=MS                      Delay between requests (default: 1000)
+    --timeout=MS                    Request timeout (default: 8000)
+    --debug=true|false              Show extracted links (default: true)
+    --max-concurrent-domains=N      Domains crawled in parallel (default: 3)
+    --max-concurrent-requests=N     Requests in parallel per domain (default: 2)
+    --help                          Show this help message
 
 Examples:
     node src/main.js --max-pages=50
     node src/main.js --delay=500 --debug=false
+    node src/main.js --max-concurrent-domains=5 --max-concurrent-requests=3
 
 Notes:
     Make sure Tor is running for .onion crawling
@@ -35,12 +37,14 @@ function getArg(name, defaultValue) {
 }
 
 // ---------- CONFIG VALUES ----------
-const DEBUG_LINKS = getArg("debug", "true") === "true";
-const MAX_PAGES = Number(getArg("max-pages", 20));
-const DELAY_MS = Number(getArg("delay", 1000));
-const TIMEOUT_MS = Number(getArg("timeout", 8000));
+const DEBUG_LINKS             = getArg("debug", "true") === "true";
+const MAX_PAGES               = Number(getArg("max-pages", 20));
+const DELAY_MS                = Number(getArg("delay", 1000));
+const TIMEOUT_MS              = Number(getArg("timeout", 8000));
+const MAX_CONCURRENT_DOMAINS  = Number(getArg("max-concurrent-domains", 3));
+const MAX_CONCURRENT_REQUESTS = Number(getArg("max-concurrent-requests", 2));
 
-const TOR_HOST = "127.0.0.1";
+const TOR_HOST  = "127.0.0.1";
 const TOR_PORTS = [9050, 9150];
 
 // ---------- EXPORT ----------
@@ -49,6 +53,8 @@ module.exports = {
     MAX_PAGES,
     DELAY_MS,
     TIMEOUT_MS,
+    MAX_CONCURRENT_DOMAINS,
+    MAX_CONCURRENT_REQUESTS,
     TOR_HOST,
     TOR_PORTS
 };

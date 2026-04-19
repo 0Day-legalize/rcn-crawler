@@ -2,4 +2,32 @@ function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-module.exports = { sleep };
+// limits how many async tasks run at the same time.
+//   const sem = new Semaphore(3);   // max 3 concurrent
+//   await sem.acquire();  // blocks until a slot is free
+class Semaphore {
+    constructor(limit) {
+        this._limit  = limit;
+        this._active = 0;
+        this._queue  = [];
+    }
+
+    acquire() {
+        if (this._active < this._limit) {
+            this._active++;
+            return Promise.resolve();
+        }
+        
+        return new Promise((resolve) => this._queue.push(resolve));
+    }
+
+    release() {
+        this._active--;
+        if (this._queue.length > 0) {
+            this._active++;
+            this._queue.shift()();
+        }
+    }
+}
+
+module.exports = { sleep, Semaphore };
