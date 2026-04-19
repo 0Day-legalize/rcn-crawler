@@ -10,9 +10,9 @@
 
 <p align="center">
 
-![Node](https://img.shields.io/badge/node-%3E=18-green)
-![Status](https://img.shields.io/badge/status-active-success)
-![Tor](https://img.shields.io/badge/tor-supported-purple)
+[![Node](https://img.shields.io/badge/node-%3E=18-green)](https://nodejs.org/)
+[![Status](https://img.shields.io/badge/status-active-success)]()
+[![Tor](https://img.shields.io/badge/tor-supported-purple)](https://www.torproject.org/)
 
 </p>
 
@@ -20,10 +20,12 @@
 
 ## ⚡ Quick Start
 
+```bash
 git clone https://github.com/0Day-legalize/WebCrawler.git
 cd WebCrawler/rcn-crawler
 npm install
 npm start
+``` 
 
 ---
 
