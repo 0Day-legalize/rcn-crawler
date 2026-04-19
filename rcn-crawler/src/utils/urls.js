@@ -51,8 +51,13 @@ function isOnion(url) {
 function normalizeLink(url, baseUrl = null) {
     try {
         const parsed = baseUrl ? new URL(url, baseUrl) : new URL(url);
+
         parsed.hostname = parsed.hostname.toLowerCase();
         parsed.hash = "";
+        // remove trailig / bug fix
+        if (parsed.pathname !== "/" && parsed.pathname.endsWith("/")) {
+            parsed.pathname = parsed.pathname.slice(0, -1);
+        }
         return parsed.toString();
     } catch {
         return null;
