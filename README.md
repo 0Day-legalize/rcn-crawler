@@ -102,7 +102,10 @@ Rules:
 
 ### Windows
 
-Download Tor: https://www.torproject.org/
+Download Tor: 
+```text
+https://www.torproject.org/
+```
 
 Extract to:
 ```bash
