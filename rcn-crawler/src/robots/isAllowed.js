@@ -1,7 +1,8 @@
-function isAllowed(url, rules) {
+function isAllowed(url, parser) {
     try {
-        const parsed = new URL(url);
-        return !rules.some((rule) => parsed.pathname.startsWith(rule));
+        const result = parser.isAllowed(url, "*");
+        // robots-parser returns undefined when no rule matches; treat as allowed
+        return result === undefined ? true : result;
     } catch {
         return false;
     }

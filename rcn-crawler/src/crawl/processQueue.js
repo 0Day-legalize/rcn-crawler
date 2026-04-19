@@ -113,7 +113,7 @@ async function handleSuccess(ctx) {
     console.log(`X-Powered-By: ${result.poweredBy}`);
 
     const links = parseLinks(result.html, next);
-    const robotsRules = await getRobots(baseHost, torAgent);
+    const robotsRules = await getRobots(next, torAgent);
     const uniqueSameDomainLinks = getUniqueAllowedSameDomainLinks(
         links,
         baseHost,
@@ -170,7 +170,7 @@ async function processQueue(queue, torAgent) {
             continue;
         }
 
-        const robotsRules = await getRobots(baseHost, torAgent);
+        const robotsRules = await getRobots(next, torAgent);
 
         if (!isAllowed(next, robotsRules)) {
             await handleBlockedByRobots(
