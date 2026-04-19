@@ -24,6 +24,8 @@ git clone https://github.com/0Day-legalize/rcn-crawler.git
 cd rcn-crawler
 npm install
 npm start
+
+Output >> results.json + unique-links.json
 ``` 
 
 ---
