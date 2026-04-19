@@ -1,5 +1,4 @@
 # 🕷️ RCN WebCrawler
-Lightweight crawler for surface & onion networks with domain-scoped crawling.
 
 <p align="center">
   <img src="./assets/logo.png" width="320">
