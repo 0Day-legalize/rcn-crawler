@@ -1,5 +1,3 @@
-/* I need to add more comments */
-
 const { DEBUG_LINKS, MAX_PAGES, DELAY_MS, MAX_CONCURRENT_DOMAINS, MAX_CONCURRENT_REQUESTS } = require("../config");
 const { sleep, Semaphore } = require("../utils/sleep");
 const { fetchUrl } = require("../http/fetchUrl");
@@ -8,6 +6,11 @@ const { enqueueSameDomainLinks } = require("./enqueueSameDomainLinks");
 const { saveResults } = require("../output/saveResults");
 const { getRobots } = require("../robots/getRobots");
 const { isAllowed } = require("../robots/isAllowed");
+const { saveVisited } = require("../output/saveVisited");
+
+// ─────────────────────────────────────────────
+// Result builders — unchanged from original
+// ─────────────────────────────────────────────
 
 function saveProgress(processedCount, visitedCount, results) {
     saveResults({ processedCount, visitedCount, results });
@@ -69,6 +72,10 @@ function logLinks(links) {
     for (const link of links) console.log(link);
 }
 
+// ─────────────────────────────────────────────
+// Per-page handlers — unchanged from original
+// ─────────────────────────────────────────────
+
 async function handleBlockedByRobots(next, baseHost, processedCount, visitedCount, results) {
     console.log(`Blocked by robots.txt: ${next}`);
     results.push(buildBlockedResult(next, baseHost));
@@ -113,6 +120,12 @@ async function handleSuccess(ctx) {
     await sleep(DELAY_MS);
 }
 
+// ─────────────────────────────────────────────
+// Single-domain crawler
+// Crawls one domain BFS-style with a per-domain
+// request semaphore (MAX_CONCURRENT_REQUESTS).
+// ─────────────────────────────────────────────
+
 async function crawlDomain(domainQueue, torAgent, sharedVisited, sharedResults, sharedCounters) {
     const queue   = [...domainQueue];             // local BFS queue for this domain
     const queued  = new Set(queue.map(i => i.url));
@@ -121,6 +134,7 @@ async function crawlDomain(domainQueue, torAgent, sharedVisited, sharedResults, 
     const { baseHost } = queue[0];
 
     while (queue.length > 0 && sharedVisited.size < MAX_PAGES) {
+        // Take up to MAX_CONCURRENT_REQUESTS items from the front
         const batch = [];
         while (queue.length > 0 && batch.length < MAX_CONCURRENT_REQUESTS) {
             const item = queue.shift();
@@ -138,6 +152,7 @@ async function crawlDomain(domainQueue, torAgent, sharedVisited, sharedResults, 
 
         if (batch.length === 0) continue;
 
+        // Run the batch concurrently, each slot guarded by the semaphore
         await Promise.all(batch.map(async ({ url: next }) => {
             await sem.acquire();
             try {
@@ -153,9 +168,12 @@ async function crawlDomain(domainQueue, torAgent, sharedVisited, sharedResults, 
                     return;
                 }
 
+                // Re-check limit here — another concurrent task may have
+                // already filled the last slot while this one was awaiting
                 if (sharedVisited.size >= MAX_PAGES) return;
 
                 sharedVisited.add(next);
+                saveVisited(sharedVisited);
                 sharedCounters.processed++;
 
                 console.log(`Processing: ${next}`);
@@ -177,7 +195,7 @@ async function crawlDomain(domainQueue, torAgent, sharedVisited, sharedResults, 
                     next,
                     baseHost,
                     result,
-                    queue,    
+                    queue,       // local domain queue so new links stay in-domain
                     visited: sharedVisited,
                     queued,
                     processedCount: sharedCounters.processed,
@@ -192,12 +210,18 @@ async function crawlDomain(domainQueue, torAgent, sharedVisited, sharedResults, 
     }
 }
 
-async function processQueue(queue, torAgent) {
+// ─────────────────────────────────────────────
+// Main entry point
+// Groups seeds by domain, then runs each domain
+// concurrently up to MAX_CONCURRENT_DOMAINS.
+// ─────────────────────────────────────────────
+
+async function processQueue(queue, torAgent, preloadedVisited = new Set()) {
     if (queue.length === 0) {
         return { processedCount: 0, visitedCount: 0, results: [] };
     }
 
-
+    // Group seed items by domain
     const domainMap = new Map();
     for (const item of queue) {
         const d = item.baseHost;
@@ -207,14 +231,17 @@ async function processQueue(queue, torAgent) {
 
     console.log(`Crawling ${domainMap.size} domain(s) — up to ${MAX_CONCURRENT_DOMAINS} in parallel\n`);
 
-    const sharedVisited  = new Set();
+    // Shared state across all domain workers
+    const sharedVisited  = new Set(preloadedVisited);  // seeded from previous runs
     const sharedResults  = [];
     const sharedCounters = { processed: 0 };
 
+    // Build one task per domain
     const domainTasks = [...domainMap.values()].map(
         (domainQueue) => () => crawlDomain(domainQueue, torAgent, sharedVisited, sharedResults, sharedCounters)
     );
 
+    // Run with a global domain concurrency cap
     const domainSem = new Semaphore(MAX_CONCURRENT_DOMAINS);
     await Promise.all(
         domainTasks.map(async (task) => {

@@ -1,8 +1,8 @@
 {
   "summary": {
     "totalDomains": 3,
-    "totalUniqueLinks": 437,
-    "exportedAt": "2026-04-19T20:16:03.516Z"
+    "totalUniqueLinks": 443,
+    "lastRunAt": "2026-04-19T20:29:09.896Z"
   },
   "domains": {
     "http://crawler-test.com": [
@@ -202,6 +202,8 @@
       "https://crawler-test.com/other/duplicated_body_content_1",
       "https://crawler-test.com/other/duplicated_body_content_2",
       "https://crawler-test.com/other/expiring_page_for_removed_test/1776629753.7951503",
+      "https://crawler-test.com/other/expiring_page_for_removed_test/1776630302.6801727",
+      "https://crawler-test.com/other/expiring_page_for_removed_test/1776630539.6730905",
       "https://crawler-test.com/other/in_web_linked",
       "https://crawler-test.com/other/in_web_linking",
       "https://crawler-test.com/other/link_tag_in_body",
@@ -402,7 +404,9 @@
       "https://crawler-test.com/urls/url_with_fragment",
       "https://crawler-test.com/urls/url_with_spaces/URL%20with%20spaces",
       "https://crawler-test.com/urls/url_with_trailing_space/%20",
-      "https://crawler-test.com/urls/with_session_id?sessionID=TLSB8mTk0REmDktUyCgj"
+      "https://crawler-test.com/urls/with_session_id?sessionID=TLSB8mTk0REmDktUyCgj",
+      "https://crawler-test.com/urls/with_session_id?sessionID=kgkF9faqJ3PyCRJ16XBr",
+      "https://crawler-test.com/urls/with_session_id?sessionID=uNJMW2NfrbcRx3cfoC4q"
     ],
     "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion": [
       "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/",
@@ -440,6 +444,8 @@
       "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/links",
       "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/logging-policy",
       "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/login",
+      "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/login?next=/course/learning-path/dark-web-mastery/",
+      "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/login?next=/pricing/",
       "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/pgp",
       "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/pricing",
       "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/privacy-policy",

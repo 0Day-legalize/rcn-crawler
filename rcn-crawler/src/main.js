@@ -8,6 +8,7 @@ const { findTorPort } = require("./tor/findTorPort");
 const { processQueue } = require("./crawl/processQueue");
 const { saveResults } = require("./output/saveResults");
 const { saveUniqueLinks } = require("./output/saveUniqueLinks");
+const { loadVisited } = require("./output/loadVisited");
 
 async function main() {
     const torPort = await findTorPort();
@@ -29,7 +30,10 @@ async function main() {
     const finalUrls = normalizeUrls(cleaned);
     const queue = buildQueue(finalUrls);
 
-    const result = await processQueue(queue, torAgent);
+    // Load visited URLs from previous runs so we don't re-crawl them
+    const preloadedVisited = loadVisited();
+
+    const result = await processQueue(queue, torAgent, preloadedVisited);
 
     const resultsPath = saveResults(result);
     const uniqueLinksPath = saveUniqueLinks(result);

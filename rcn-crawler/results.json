@@ -2,7 +2,7 @@
   "summary": {
     "processedCount": 20,
     "visitedCount": 20,
-    "exportedAt": "2026-04-19T20:16:03.515Z"
+    "exportedAt": "2026-04-19T20:29:09.894Z"
   },
   "pages": [
     {
@@ -192,7 +192,7 @@
         "https://crawler-test.com/urls/duplicate_page/foo",
         "https://crawler-test.com/urls/duplicate_page/bar",
         "https://crawler-test.com/urls/duplicate_page/baz",
-        "https://crawler-test.com/urls/with_session_id?sessionID=TLSB8mTk0REmDktUyCgj",
+        "https://crawler-test.com/urls/with_session_id?sessionID=kgkF9faqJ3PyCRJ16XBr",
         "https://crawler-test.com/urls/page_url_length_n",
         "https://crawler-test.com/urls/url_with_fragment",
         "https://crawler-test.com/url/URL%2c_with_encoded_reserved_character",
@@ -397,7 +397,7 @@
         "https://crawler-test.com/other/conflicting_language_tags",
         "https://crawler-test.com/other/page_load_time_n",
         "https://crawler-test.com/other/crawler_request_headers",
-        "https://crawler-test.com/other/expiring_page_for_removed_test/1776629753.7951503",
+        "https://crawler-test.com/other/expiring_page_for_removed_test/1776630539.6730905",
         "https://crawler-test.com/other/duplicated_body_content_1",
         "https://crawler-test.com/other/duplicated_body_content_2",
         "https://crawler-test.com/other/string_width/512/string",
@@ -413,55 +413,7 @@
         "https://crawler-test.com/other/link_tag_in_body",
         "https://crawler-test.com/other/basic_auth"
       ],
-      "crawledAt": "2026-04-19T20:15:53.874Z"
-    },
-    {
-      "url": "https://crawler-test.com/mobile/separate_desktop",
-      "baseHost": "crawler-test.com",
-      "success": true,
-      "status": 200,
-      "server": null,
-      "poweredBy": null,
-      "linksFoundRaw": 1,
-      "linksFoundUnique": 1,
-      "links": [
-        "https://crawler-test.com/"
-      ],
-      "crawledAt": "2026-04-19T20:15:55.035Z"
-    },
-    {
-      "url": "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/",
-      "baseHost": "juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion",
-      "success": true,
-      "status": 200,
-      "server": "nginx/1.22.1",
-      "poweredBy": null,
-      "linksFoundRaw": 12,
-      "linksFoundUnique": 7,
-      "links": [
-        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/about",
-        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/add",
-        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/privacy",
-        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/terms",
-        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/blacklist",
-        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/legal",
-        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/"
-      ],
-      "crawledAt": "2026-04-19T20:15:55.062Z"
-    },
-    {
-      "url": "https://crawler-test.com/mobile/desktop_with_AMP_as_mobile",
-      "baseHost": "crawler-test.com",
-      "success": true,
-      "status": 200,
-      "server": null,
-      "poweredBy": null,
-      "linksFoundRaw": 1,
-      "linksFoundUnique": 1,
-      "links": [
-        "https://crawler-test.com/"
-      ],
-      "crawledAt": "2026-04-19T20:15:55.379Z"
+      "crawledAt": "2026-04-19T20:28:59.756Z"
     },
     {
       "url": "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/",
@@ -491,10 +443,10 @@
         "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/terms",
         "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/privacy-policy"
       ],
-      "crawledAt": "2026-04-19T20:15:56.219Z"
+      "crawledAt": "2026-04-19T20:29:00.487Z"
     },
     {
-      "url": "https://crawler-test.com/mobile/separate_desktop_with_different_title",
+      "url": "https://crawler-test.com/mobile/separate_desktop",
       "baseHost": "crawler-test.com",
       "success": true,
       "status": 200,
@@ -505,7 +457,41 @@
       "links": [
         "https://crawler-test.com/"
       ],
-      "crawledAt": "2026-04-19T20:15:56.527Z"
+      "crawledAt": "2026-04-19T20:29:00.913Z"
+    },
+    {
+      "url": "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/",
+      "baseHost": "juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion",
+      "success": true,
+      "status": 200,
+      "server": "nginx/1.22.1",
+      "poweredBy": null,
+      "linksFoundRaw": 12,
+      "linksFoundUnique": 7,
+      "links": [
+        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/about",
+        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/add",
+        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/privacy",
+        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/terms",
+        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/blacklist",
+        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/legal",
+        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/"
+      ],
+      "crawledAt": "2026-04-19T20:29:01.084Z"
+    },
+    {
+      "url": "https://crawler-test.com/mobile/desktop_with_AMP_as_mobile",
+      "baseHost": "crawler-test.com",
+      "success": true,
+      "status": 200,
+      "server": null,
+      "poweredBy": null,
+      "linksFoundRaw": 1,
+      "linksFoundUnique": 1,
+      "links": [
+        "https://crawler-test.com/"
+      ],
+      "crawledAt": "2026-04-19T20:29:01.196Z"
     },
     {
       "url": "https://crawler-test.com/mobile/separate_desktop_with_different_h1",
@@ -519,10 +505,10 @@
       "links": [
         "https://crawler-test.com/"
       ],
-      "crawledAt": "2026-04-19T20:15:56.538Z"
+      "crawledAt": "2026-04-19T20:29:02.343Z"
     },
     {
-      "url": "https://crawler-test.com/mobile/separate_desktop_with_different_wordcount",
+      "url": "https://crawler-test.com/mobile/separate_desktop_with_different_title",
       "baseHost": "crawler-test.com",
       "success": true,
       "status": 200,
@@ -533,7 +519,7 @@
       "links": [
         "https://crawler-test.com/"
       ],
-      "crawledAt": "2026-04-19T20:15:57.694Z"
+      "crawledAt": "2026-04-19T20:29:02.348Z"
     },
     {
       "url": "https://crawler-test.com/mobile/separate_desktop_with_different_links_in",
@@ -547,30 +533,10 @@
       "links": [
         "https://crawler-test.com/"
       ],
-      "crawledAt": "2026-04-19T20:15:57.700Z"
+      "crawledAt": "2026-04-19T20:29:03.503Z"
     },
     {
-      "url": "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/add",
-      "baseHost": "juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion",
-      "success": true,
-      "status": 200,
-      "server": "nginx/1.22.1",
-      "poweredBy": null,
-      "linksFoundRaw": 9,
-      "linksFoundUnique": 7,
-      "links": [
-        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/",
-        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/about",
-        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/add",
-        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/privacy",
-        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/terms",
-        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/blacklist",
-        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/legal"
-      ],
-      "crawledAt": "2026-04-19T20:15:58.626Z"
-    },
-    {
-      "url": "https://crawler-test.com/mobile/separate_desktop_with_mobile_not_subdomain",
+      "url": "https://crawler-test.com/mobile/separate_desktop_with_different_wordcount",
       "baseHost": "crawler-test.com",
       "success": true,
       "status": 200,
@@ -581,121 +547,7 @@
       "links": [
         "https://crawler-test.com/"
       ],
-      "crawledAt": "2026-04-19T20:15:58.851Z"
-    },
-    {
-      "url": "https://crawler-test.com/mobile/separate_desktop_with_different_links_out",
-      "baseHost": "crawler-test.com",
-      "success": true,
-      "status": 200,
-      "server": null,
-      "poweredBy": null,
-      "linksFoundRaw": 9,
-      "linksFoundUnique": 2,
-      "links": [
-        "https://crawler-test.com/",
-        "https://crawler-test.com/mobile/separate_desktop_with_different_links_in"
-      ],
-      "crawledAt": "2026-04-19T20:15:58.860Z"
-    },
-    {
-      "url": "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/about",
-      "baseHost": "juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion",
-      "success": true,
-      "status": 200,
-      "server": "nginx/1.22.1",
-      "poweredBy": null,
-      "linksFoundRaw": 16,
-      "linksFoundUnique": 9,
-      "links": [
-        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/",
-        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/about",
-        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/add",
-        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/privacy",
-        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/terms",
-        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/blacklist",
-        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/legal",
-        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/banned",
-        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/onions"
-      ],
-      "crawledAt": "2026-04-19T20:15:58.866Z"
-    },
-    {
-      "url": "https://crawler-test.com/mobile/separate_mobile_with_mobile_not_subdomain",
-      "baseHost": "crawler-test.com",
-      "success": true,
-      "status": 200,
-      "server": null,
-      "poweredBy": null,
-      "linksFoundRaw": 1,
-      "linksFoundUnique": 1,
-      "links": [
-        "https://crawler-test.com/"
-      ],
-      "crawledAt": "2026-04-19T20:16:00.031Z"
-    },
-    {
-      "url": "https://crawler-test.com/mobile/desktop_with_self_canonical_mobile_and_amp",
-      "baseHost": "crawler-test.com",
-      "success": true,
-      "status": 200,
-      "server": null,
-      "poweredBy": null,
-      "linksFoundRaw": 1,
-      "linksFoundUnique": 1,
-      "links": [
-        "https://crawler-test.com/"
-      ],
-      "crawledAt": "2026-04-19T20:16:00.033Z"
-    },
-    {
-      "url": "https://crawler-test.com/mobile/dynamic",
-      "baseHost": "crawler-test.com",
-      "success": true,
-      "status": 200,
-      "server": null,
-      "poweredBy": null,
-      "linksFoundRaw": 1,
-      "linksFoundUnique": 1,
-      "links": [
-        "https://crawler-test.com/"
-      ],
-      "crawledAt": "2026-04-19T20:16:01.188Z"
-    },
-    {
-      "url": "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/courses",
-      "baseHost": "bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion",
-      "success": true,
-      "status": 200,
-      "server": "gunicorn",
-      "poweredBy": null,
-      "linksFoundRaw": 38,
-      "linksFoundUnique": 22,
-      "links": [
-        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/",
-        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/courses",
-        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/labs",
-        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/learning-paths",
-        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/pricing",
-        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/blog",
-        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/guides",
-        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/vpn",
-        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/links",
-        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/leaderboard",
-        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/login",
-        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/signup",
-        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/enroll-free",
-        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/course/learning-path/dark-web-mastery",
-        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/course/dark-web-foundations",
-        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/course/tails-masterclass",
-        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/course/tor-masterclass",
-        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/starting-guide",
-        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/pgp",
-        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/logging-policy",
-        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/terms",
-        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/privacy-policy"
-      ],
-      "crawledAt": "2026-04-19T20:16:01.258Z"
+      "crawledAt": "2026-04-19T20:29:03.515Z"
     },
     {
       "url": "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/labs",
@@ -734,7 +586,204 @@
         "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/terms",
         "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/privacy-policy"
       ],
-      "crawledAt": "2026-04-19T20:16:02.062Z"
+      "crawledAt": "2026-04-19T20:29:03.561Z"
+    },
+    {
+      "url": "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/courses",
+      "baseHost": "bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion",
+      "success": true,
+      "status": 200,
+      "server": "gunicorn",
+      "poweredBy": null,
+      "linksFoundRaw": 38,
+      "linksFoundUnique": 22,
+      "links": [
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/courses",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/labs",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/learning-paths",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/pricing",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/blog",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/guides",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/vpn",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/links",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/leaderboard",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/login",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/signup",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/enroll-free",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/course/learning-path/dark-web-mastery",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/course/dark-web-foundations",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/course/tails-masterclass",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/course/tor-masterclass",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/starting-guide",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/pgp",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/logging-policy",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/terms",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/privacy-policy"
+      ],
+      "crawledAt": "2026-04-19T20:29:03.734Z"
+    },
+    {
+      "url": "https://crawler-test.com/mobile/separate_desktop_with_mobile_not_subdomain",
+      "baseHost": "crawler-test.com",
+      "success": true,
+      "status": 200,
+      "server": null,
+      "poweredBy": null,
+      "linksFoundRaw": 1,
+      "linksFoundUnique": 1,
+      "links": [
+        "https://crawler-test.com/"
+      ],
+      "crawledAt": "2026-04-19T20:29:04.667Z"
+    },
+    {
+      "url": "https://crawler-test.com/mobile/separate_desktop_with_different_links_out",
+      "baseHost": "crawler-test.com",
+      "success": true,
+      "status": 200,
+      "server": null,
+      "poweredBy": null,
+      "linksFoundRaw": 9,
+      "linksFoundUnique": 2,
+      "links": [
+        "https://crawler-test.com/",
+        "https://crawler-test.com/mobile/separate_desktop_with_different_links_in"
+      ],
+      "crawledAt": "2026-04-19T20:29:04.685Z"
+    },
+    {
+      "url": "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/about",
+      "baseHost": "juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion",
+      "success": true,
+      "status": 200,
+      "server": "nginx/1.22.1",
+      "poweredBy": null,
+      "linksFoundRaw": 16,
+      "linksFoundUnique": 9,
+      "links": [
+        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/",
+        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/about",
+        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/add",
+        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/privacy",
+        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/terms",
+        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/blacklist",
+        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/legal",
+        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/banned",
+        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/onions"
+      ],
+      "crawledAt": "2026-04-19T20:29:05.231Z"
+    },
+    {
+      "url": "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/add",
+      "baseHost": "juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion",
+      "success": true,
+      "status": 200,
+      "server": "nginx/1.22.1",
+      "poweredBy": null,
+      "linksFoundRaw": 9,
+      "linksFoundUnique": 7,
+      "links": [
+        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/",
+        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/about",
+        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/add",
+        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/privacy",
+        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/terms",
+        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/blacklist",
+        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/legal"
+      ],
+      "crawledAt": "2026-04-19T20:29:05.482Z"
+    },
+    {
+      "url": "https://crawler-test.com/mobile/separate_mobile_with_mobile_not_subdomain",
+      "baseHost": "crawler-test.com",
+      "success": true,
+      "status": 200,
+      "server": null,
+      "poweredBy": null,
+      "linksFoundRaw": 1,
+      "linksFoundUnique": 1,
+      "links": [
+        "https://crawler-test.com/"
+      ],
+      "crawledAt": "2026-04-19T20:29:05.830Z"
+    },
+    {
+      "url": "https://crawler-test.com/mobile/desktop_with_self_canonical_mobile_and_amp",
+      "baseHost": "crawler-test.com",
+      "success": true,
+      "status": 200,
+      "server": null,
+      "poweredBy": null,
+      "linksFoundRaw": 1,
+      "linksFoundUnique": 1,
+      "links": [
+        "https://crawler-test.com/"
+      ],
+      "crawledAt": "2026-04-19T20:29:05.836Z"
+    },
+    {
+      "url": "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/learning-paths",
+      "baseHost": "bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion",
+      "success": true,
+      "status": 200,
+      "server": "gunicorn",
+      "poweredBy": null,
+      "linksFoundRaw": 33,
+      "linksFoundUnique": 19,
+      "links": [
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/courses",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/labs",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/learning-paths",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/pricing",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/blog",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/guides",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/vpn",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/links",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/leaderboard",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/login",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/signup",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/login?next=/course/learning-path/dark-web-mastery/",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/course/learning-path/dark-web-mastery",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/starting-guide",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/pgp",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/logging-policy",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/terms",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/privacy-policy"
+      ],
+      "crawledAt": "2026-04-19T20:29:06.405Z"
+    },
+    {
+      "url": "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/pricing",
+      "baseHost": "bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion",
+      "success": true,
+      "status": 200,
+      "server": "gunicorn",
+      "poweredBy": null,
+      "linksFoundRaw": 35,
+      "linksFoundUnique": 18,
+      "links": [
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/courses",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/labs",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/learning-paths",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/pricing",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/blog",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/guides",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/vpn",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/links",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/leaderboard",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/login",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/signup",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/login?next=/pricing/",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/starting-guide",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/pgp",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/logging-policy",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/terms",
+        "http://bzcajujczdh7kgn5gcky2buyu2a6yocaji63ksoqodi5ughkd6qzagad.onion/privacy-policy"
+      ],
+      "crawledAt": "2026-04-19T20:29:06.612Z"
     },
     {
       "url": "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/privacy",
@@ -754,27 +803,7 @@
         "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/blacklist",
         "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/legal"
       ],
-      "crawledAt": "2026-04-19T20:16:02.275Z"
-    },
-    {
-      "url": "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/terms",
-      "baseHost": "juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion",
-      "success": true,
-      "status": 200,
-      "server": "nginx/1.22.1",
-      "poweredBy": null,
-      "linksFoundRaw": 10,
-      "linksFoundUnique": 7,
-      "links": [
-        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/",
-        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/about",
-        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/add",
-        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/privacy",
-        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/terms",
-        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/blacklist",
-        "http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/legal"
-      ],
-      "crawledAt": "2026-04-19T20:16:02.513Z"
+      "crawledAt": "2026-04-19T20:29:08.879Z"
     }
   ]
 }
