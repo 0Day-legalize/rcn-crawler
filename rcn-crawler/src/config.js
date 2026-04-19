@@ -34,11 +34,20 @@ function getArg(name, defaultValue) {
     return arg ? arg.slice(prefix.length) : defaultValue;
 }
 
+function parsePositiveInt(value, name, defaultValue) {
+    const n = Number(value);
+    if (!Number.isInteger(n) || n <= 0) {
+        console.error(`Invalid value for --${name}: "${value}". Using default ${defaultValue}.`);
+        return defaultValue;
+    }
+    return n;
+}
+
 // ---------- CONFIG VALUES ----------
 const DEBUG_LINKS = getArg("debug", "true") === "true";
-const MAX_PAGES = Number(getArg("max-pages", 20));
-const DELAY_MS = Number(getArg("delay", 1000));
-const TIMEOUT_MS = Number(getArg("timeout", 8000));
+const MAX_PAGES = parsePositiveInt(getArg("max-pages", 20), "max-pages", 20);
+const DELAY_MS = parsePositiveInt(getArg("delay", 1000), "delay", 1000);
+const TIMEOUT_MS = parsePositiveInt(getArg("timeout", 8000), "timeout", 8000);
 
 const TOR_HOST = "127.0.0.1";
 const TOR_PORTS = [9050, 9150];

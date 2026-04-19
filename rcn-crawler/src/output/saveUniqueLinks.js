@@ -9,7 +9,7 @@ function saveUniqueLinks(result) {
     for (const page of result.results) {
         if (!page.baseHost || !page.links) continue;
 
-        const baseKey = `http://${page.baseHost}`;
+        const baseKey = new URL(page.url).origin;
 
         if (!grouped[baseKey]) {
             grouped[baseKey] = new Set();
