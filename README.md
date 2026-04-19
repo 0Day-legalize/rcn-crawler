@@ -150,6 +150,21 @@ const agent = new SocksProxyAgent("socks5h://127.0.0.1:9050");
 
 ---
 
+## 🚀 Usage 
+
+1. git clone https://github.com/0Day-legalize/WebCrawler.git
+
+2. cd rcn-crawler
+
+3. npm install
+
+4. Add more urls to urls.txt
+
+5. make sure tor is running
+
+6. npm start
+---
+
 ## 🛠️ Notes
 
 - `.onion` requires Tor — won’t work otherwise  
