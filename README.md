@@ -184,6 +184,40 @@ Port 9050 is open
 
 ---
 
+⚙️ Configuration
+
+Crawler behavior is configured in:
+
+```text
+src/config.js
+```
+
+Defaults:
+
+```js
+const DEBUG_LINKS = true;
+const MAX_PAGES = 20;
+const DELAY_MS = 1000;
+const TIMEOUT_MS = 8000;
+```
+
+CLI flags override these defaults.
+
+Examples:
+
+```bash
+node src/main.js --max-pages=50
+node src/main.js --delay=500 --timeout=10000
+node src/main.js --debug=false
+```
+
+Show available options:
+```bash
+node src/main.js --help
+```
+
+---
+
 ## 🚀 Run the crawler
 
 ```bash
