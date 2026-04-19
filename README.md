@@ -8,13 +8,11 @@
   Dark Web Crawler • Onion Support • Queue Engine
 </p>
 
-<p align="center">
 
 [![Node](https://img.shields.io/badge/node-%3E=18-green)](https://nodejs.org/)
 [![Status](https://img.shields.io/badge/status-active-success)]()
 [![Tor](https://img.shields.io/badge/tor-supported-purple)](https://www.torproject.org/)
 
-</p>
 
 ---
 
@@ -83,8 +81,10 @@ npm install
 
 Add seed URLs (one per line):
 
+```text
 https://example.com
 http://exampleonionaddress.onion/
+```
 
 Rules:
 
