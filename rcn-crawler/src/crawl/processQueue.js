@@ -1,16 +1,22 @@
-const { DEBUG_LINKS, MAX_PAGES, DELAY_MS, MAX_CONCURRENT_DOMAINS, MAX_CONCURRENT_REQUESTS } = require("../config");
+const { SocksProxyAgent } = require("socks-proxy-agent");
+const {
+    DEBUG_LINKS,
+    MAX_PAGES,
+    DELAY_MS,
+    MAX_CONCURRENT_DOMAINS,
+    MAX_CONCURRENT_REQUESTS,
+    VISITED_SAVE_INTERVAL
+} = require("../config");
 const { sleep, Semaphore } = require("../utils/sleep");
 const { fetchUrl } = require("../http/fetchUrl");
 const { parseLinks } = require("../parser/parseLinks");
 const { enqueueSameDomainLinks } = require("./enqueueSameDomainLinks");
 const { saveResults } = require("../output/saveResults");
+const { saveVisited } = require("../output/saveVisited");
 const { getRobots } = require("../robots/getRobots");
 const { isAllowed } = require("../robots/isAllowed");
-const { saveVisited } = require("../output/saveVisited");
+const { TOR_HOST } = require("../config");
 
-// ─────────────────────────────────────────────
-// Result builders — unchanged from original
-// ─────────────────────────────────────────────
 
 function saveProgress(processedCount, visitedCount, results) {
     saveResults({ processedCount, visitedCount, results });
@@ -56,10 +62,7 @@ function getUniqueAllowedSameDomainLinks(links, baseHost, robotsRules) {
         links.filter((link) => {
             try {
                 const parsed = new URL(link);
-                return (
-                    parsed.hostname.toLowerCase() === baseHost &&
-                    isAllowed(link, robotsRules)
-                );
+                return parsed.hostname.toLowerCase() === baseHost && isAllowed(link, robotsRules);
             } catch {
                 return false;
             }
@@ -71,10 +74,6 @@ function logLinks(links) {
     if (!DEBUG_LINKS) return;
     for (const link of links) console.log(link);
 }
-
-// ─────────────────────────────────────────────
-// Per-page handlers — unchanged from original
-// ─────────────────────────────────────────────
 
 async function handleBlockedByRobots(next, baseHost, processedCount, visitedCount, results) {
     console.log(`Blocked by robots.txt: ${next}`);
@@ -94,10 +93,16 @@ async function handleFetchError(next, baseHost, error, processedCount, visitedCo
 
 async function handleSuccess(ctx) {
     const {
-        next, baseHost, result,
-        queue, visited, queued,
-        processedCount, visitedCount,
-        results, torAgent
+        next,
+        baseHost,
+        result,
+        queue,
+        visited,
+        queued,
+        processedCount,
+        visitedCount,
+        results,
+        domainAgent
     } = ctx;
 
     console.log(`Status: ${result.status}`);
@@ -105,7 +110,7 @@ async function handleSuccess(ctx) {
     console.log(`X-Powered-By: ${result.poweredBy}`);
 
     const links = parseLinks(result.html, next);
-    const robotsRules = await getRobots(baseHost, torAgent);
+    const robotsRules = await getRobots(baseHost, domainAgent);
     const uniqueSameDomainLinks = getUniqueAllowedSameDomainLinks(links, baseHost, robotsRules);
 
     console.log(`Links found: ${links.length}`);
@@ -115,28 +120,26 @@ async function handleSuccess(ctx) {
     enqueueSameDomainLinks(uniqueSameDomainLinks, queue, visited, queued, baseHost);
     results.push(buildSuccessResult(next, baseHost, result, links, uniqueSameDomainLinks));
     saveProgress(processedCount, visitedCount, results);
-
     console.log("");
     await sleep(DELAY_MS);
 }
 
-// ─────────────────────────────────────────────
-// Single-domain crawler
-// Crawls one domain BFS-style with a per-domain
-// request semaphore (MAX_CONCURRENT_REQUESTS).
-// ─────────────────────────────────────────────
-
-async function crawlDomain(domainQueue, torAgent, sharedVisited, sharedResults, sharedCounters) {
-    const queue   = [...domainQueue];             // local BFS queue for this domain
-    const queued  = new Set(queue.map(i => i.url));
-    const sem     = new Semaphore(MAX_CONCURRENT_REQUESTS);
+async function crawlDomain(domainQueue, torPort, sharedVisited, sharedResults, sharedCounters) {
+    const queue = [...domainQueue];
+    const queued = new Set(queue.map(i => i.url));
+    const sem = new Semaphore(MAX_CONCURRENT_REQUESTS);
 
     const { baseHost } = queue[0];
+    const domainAgent = new SocksProxyAgent(`socks5h://${TOR_HOST}:${torPort}`);
 
-    while (queue.length > 0 && sharedVisited.size < MAX_PAGES) {
-        // Take up to MAX_CONCURRENT_REQUESTS items from the front
+    while (queue.length > 0 && sharedCounters.processed < MAX_PAGES) {
         const batch = [];
-        while (queue.length > 0 && batch.length < MAX_CONCURRENT_REQUESTS) {
+
+        while (
+            queue.length > 0 &&
+            batch.length < MAX_CONCURRENT_REQUESTS &&
+            sharedCounters.processed < MAX_PAGES
+        ) {
             const item = queue.shift();
             if (!item) break;
 
@@ -152,15 +155,19 @@ async function crawlDomain(domainQueue, torAgent, sharedVisited, sharedResults, 
 
         if (batch.length === 0) continue;
 
-        // Run the batch concurrently, each slot guarded by the semaphore
         await Promise.all(batch.map(async ({ url: next }) => {
             await sem.acquire();
+
             try {
-                const robotsRules = await getRobots(baseHost, torAgent);
+                // Stop as early as possible if another worker already reached the cap
+                if (sharedCounters.processed >= MAX_PAGES) return;
+
+                const robotsRules = await getRobots(baseHost, domainAgent);
 
                 if (!isAllowed(next, robotsRules)) {
                     await handleBlockedByRobots(
-                        next, baseHost,
+                        next,
+                        baseHost,
                         sharedCounters.processed,
                         sharedVisited.size,
                         sharedResults
@@ -168,21 +175,24 @@ async function crawlDomain(domainQueue, torAgent, sharedVisited, sharedResults, 
                     return;
                 }
 
-                // Re-check limit here — another concurrent task may have
-                // already filled the last slot while this one was awaiting
-                if (sharedVisited.size >= MAX_PAGES) return;
+                // Check again before starting network work
+                if (sharedCounters.processed >= MAX_PAGES) return;
 
                 sharedVisited.add(next);
-                saveVisited(sharedVisited);
-                sharedCounters.processed++;
+                sharedCounters.sinceLastSave++;
+
+                if (sharedCounters.sinceLastSave >= VISITED_SAVE_INTERVAL) {
+                    saveVisited(sharedVisited);
+                    sharedCounters.sinceLastSave = 0;
+                }
 
                 console.log(`Processing: ${next}`);
-
-                const result = await fetchUrl(next, torAgent);
+                const result = await fetchUrl(next, domainAgent);
 
                 if (result.error) {
                     await handleFetchError(
-                        next, baseHost,
+                        next,
+                        baseHost,
                         result.error,
                         sharedCounters.processed,
                         sharedVisited.size,
@@ -191,37 +201,41 @@ async function crawlDomain(domainQueue, torAgent, sharedVisited, sharedResults, 
                     return;
                 }
 
+                // Count only successful processed pages toward MAX_PAGES
+                if (sharedCounters.processed >= MAX_PAGES) return;
+                sharedCounters.processed++;
+
                 await handleSuccess({
                     next,
                     baseHost,
                     result,
-                    queue,       // local domain queue so new links stay in-domain
+                    queue,
                     visited: sharedVisited,
                     queued,
                     processedCount: sharedCounters.processed,
-                    visitedCount:   sharedVisited.size,
-                    results:        sharedResults,
-                    torAgent
+                    visitedCount: sharedVisited.size,
+                    results: sharedResults,
+                    domainAgent
                 });
             } finally {
                 sem.release();
             }
         }));
     }
+
+    console.log(`[${baseHost}] Done`);
 }
 
-// ─────────────────────────────────────────────
-// Main entry point
-// Groups seeds by domain, then runs each domain
-// concurrently up to MAX_CONCURRENT_DOMAINS.
-// ─────────────────────────────────────────────
+async function processQueue({
+    queue,
+    torPort,
+    preloadedVisited = new Set()
+}) {
 
-async function processQueue(queue, torAgent, preloadedVisited = new Set()) {
-    if (queue.length === 0) {
+    if (!queue || queue.length === 0) {
         return { processedCount: 0, visitedCount: 0, results: [] };
     }
 
-    // Group seed items by domain
     const domainMap = new Map();
     for (const item of queue) {
         const d = item.baseHost;
@@ -231,27 +245,33 @@ async function processQueue(queue, torAgent, preloadedVisited = new Set()) {
 
     console.log(`Crawling ${domainMap.size} domain(s) — up to ${MAX_CONCURRENT_DOMAINS} in parallel\n`);
 
-    // Shared state across all domain workers
-    const sharedVisited  = new Set(preloadedVisited);  // seeded from previous runs
-    const sharedResults  = [];
-    const sharedCounters = { processed: 0 };
+    const sharedVisited = new Set(preloadedVisited);
+    const sharedResults = [];
+    const sharedCounters = {
+        processed: 0,
+        sinceLastSave: 0
+    };
 
-    // Build one task per domain
     const domainTasks = [...domainMap.values()].map(
-        (domainQueue) => () => crawlDomain(domainQueue, torAgent, sharedVisited, sharedResults, sharedCounters)
+        (dq) => () => crawlDomain(dq, torPort, sharedVisited, sharedResults, sharedCounters)
     );
 
-    // Run with a global domain concurrency cap
     const domainSem = new Semaphore(MAX_CONCURRENT_DOMAINS);
+
     await Promise.all(
         domainTasks.map(async (task) => {
             await domainSem.acquire();
-            try { await task(); }
-            finally { domainSem.release(); }
+            try {
+                await task();
+            } finally {
+                domainSem.release();
+            }
         })
     );
 
-    if (sharedVisited.size >= MAX_PAGES) {
+    saveVisited(sharedVisited);
+
+    if (sharedCounters.processed >= MAX_PAGES) {
         console.log(`Reached MAX_PAGES limit (${MAX_PAGES})`);
     } else {
         console.log("All queues empty. Crawl finished.");
@@ -259,8 +279,8 @@ async function processQueue(queue, torAgent, preloadedVisited = new Set()) {
 
     return {
         processedCount: sharedCounters.processed,
-        visitedCount:   sharedVisited.size,
-        results:        sharedResults
+        visitedCount: sharedVisited.size,
+        results: sharedResults
     };
 }
 

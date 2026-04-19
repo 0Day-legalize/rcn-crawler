@@ -14,33 +14,47 @@ async function main() {
     const torPort = await findTorPort();
 
     if (!torPort) {
-        console.error("Tor is not running on 127.0.0.1:9050 or 127.0.0.1:9150");
-        console.error("Start Tor service or Tor Browser, then try again.");
+        console.error("✗  Tor is not running on 127.0.0.1:9050 or 127.0.0.1:9150");
+        console.error("   Start Tor service or Tor Browser, then try again.");
         process.exit(1);
     }
 
-    console.log(`Tor detected on port ${torPort}`);
-
-    const torAgent = new SocksProxyAgent(`socks5h://${TOR_HOST}:${torPort}`);
+    console.log(`✓  Tor detected on port ${torPort}`);
 
     const filePath = path.join(__dirname, "..", "urls.txt");
-    const fileContent = fs.readFileSync(filePath, "utf-8");
 
+    if (!fs.existsSync(filePath)) {
+        console.error(`✗  urls.txt not found at: ${filePath}`);
+        console.error("   Create a urls.txt file in the project root with one URL per line.");
+        process.exit(1);
+    }
+
+    const fileContent = fs.readFileSync(filePath, "utf-8");
     const cleaned = cleanUrls(fileContent);
     const finalUrls = normalizeUrls(cleaned);
     const queue = buildQueue(finalUrls);
 
-    // Load visited URLs from previous runs so we don't re-crawl them
+    if (queue.length === 0) {
+        console.error("✗  urls.txt contains no valid URLs.");
+        process.exit(1);
+    }
+
+    console.log(`Loaded ${queue.length} seed URL(s)`);
+
     const preloadedVisited = loadVisited();
 
-    const result = await processQueue(queue, torAgent, preloadedVisited);
+    const result = await processQueue({
+        queue,
+        torPort,
+        preloadedVisited
+    });
 
     const resultsPath = saveResults(result);
     const uniqueLinksPath = saveUniqueLinks(result);
 
-    console.log("Total processed:", result.processedCount);
-    console.log("Total visited:", result.visitedCount);
-    console.log("Saved JSON:", resultsPath);
+    console.log("\nTotal processed:", result.processedCount);
+    console.log("Total visited:  ", result.visitedCount);
+    console.log("Saved JSON:     ", resultsPath);
     console.log("Saved unique links JSON:", uniqueLinksPath);
 }
 

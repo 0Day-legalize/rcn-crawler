@@ -9,7 +9,7 @@ function saveVisited(visited) {
             totalVisited: visited.size,
             lastRunAt: new Date().toISOString()
         },
-        urls: [...visited].sort()
+        urls: [...visited].sort((a, b) => a.localeCompare(b))
     };
 
     fs.writeFileSync(OUTPUT_PATH, JSON.stringify(final, null, 2), "utf-8");
