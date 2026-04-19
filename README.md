@@ -55,18 +55,20 @@ Crawler → Tor (SOCKS5) → Internet / Onion Network
 * Tor (required for .onion)
 
 Check installation:
-
+```shell
 node -v
 npm -v
-
+```
 ---
 
 ## 📦 Installation
 
 1. Clone the repository
 
+```shell
 git clone https://github.com/0Day-legalize/WebCrawler.git
 cd WebCrawler/rcn-crawler
+```
 
 2. Install dependencies
 
@@ -135,22 +137,29 @@ Test-NetConnection 127.0.0.1 -Port 9050
 
 Linux:
 
+```shell
 ss -tulnp | grep 9050
+```
 
 Expected:
 
+```text
 Port 9050 is open
+```
 
 ---
 
 ## 🚀 Run the crawler
 
+```shell
 npm start
+```
 
 ---
 
 ## 🧪 Example Output
 
+```text
 Tor detected on port 9050
 Processing: https://example.com
 Status: 200
@@ -158,11 +167,13 @@ Links found: 5
 
 Total processed: 5
 Total visited: 5
+```
 
 ---
 
 ## 📁 Project Structure
 
+```text
 rcn-crawler/
 ├── src/
 │   ├── crawl/
@@ -173,6 +184,7 @@ rcn-crawler/
 │   └── main.js
 ├── urls.txt
 ├── package.json
+```
 
 ---
 
@@ -204,4 +216,4 @@ Do not use it to crawl systems without permission.
 
 ## 👨‍💻 Author
 
-RCN Project
+RCN
