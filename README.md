@@ -5,9 +5,9 @@
 
   Dark Web Crawler • Onion Support • Queue Engine<br><br>
 
-  <img src="https://img.shields.io/badge/node-%3E=18-green">
-  <img src="https://img.shields.io/badge/status-active-success">
-  <img src="https://img.shields.io/badge/tor-supported-purple">
+  <img src="https://img.shields.io/badge/node-%3E=18-green" />
+  <img src="https://img.shields.io/badge/status-active-success" />
+  <img src="https://img.shields.io/badge/tor-supported-purple" />
 </p>
 
 ---
