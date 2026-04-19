@@ -184,7 +184,7 @@ Port 9050 is open
 
 ---
 
-⚙️ Configuration
+## ⚙️ Configuration
 
 Crawler behavior is configured in:
 
