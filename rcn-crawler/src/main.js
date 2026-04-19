@@ -6,6 +6,8 @@ const { TOR_HOST } = require("./config");
 const { cleanUrls, normalizeUrls, buildQueue } = require("./utils/urls");
 const { findTorPort } = require("./tor/findTorPort");
 const { processQueue } = require("./crawl/processQueue");
+const { saveResults } = require("./output/saveResults");
+const { saveUniqueLinks } = require("./output/saveUniqueLinks");
 
 async function main() {
     const torPort = await findTorPort();
@@ -29,11 +31,16 @@ async function main() {
 
     const result = await processQueue(queue, torAgent);
 
+    const resultsPath = saveResults(result);
+    const uniqueLinksPath = saveUniqueLinks(result);
+
     console.log("Total processed:", result.processedCount);
     console.log("Total visited:", result.visitedCount);
-    }
+    console.log("Saved JSON:", resultsPath);
+    console.log("Saved unique links JSON:", uniqueLinksPath);
+}
 
-    if (require.main === module) {
+if (require.main === module) {
     main().catch((error) => {
         console.error("Fatal error:", error);
         process.exit(1);

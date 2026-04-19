@@ -1,4 +1,5 @@
 # 🕷️ RCN WebCrawler
+Lightweight crawler for surface & onion networks with domain-scoped crawling.
 
 <p align="center">
   <img src="./assets/logo.png" width="320">
@@ -19,10 +20,24 @@
 ## ⚡ Quick Start
 
 ```bash
-git clone https://github.com/0Day-legalize/WebCrawler.git
-cd WebCrawler/rcn-crawler
+git clone https://github.com/0Day-legalize/rcn-crawler.git
+cd rcn-crawler
 npm install
 npm start
+``` 
+
+---
+
+## ⚙️ Configuration
+
+You can configure crawler behavior in:
+
+### Example
+
+```js
+const MAX_PAGES = 20;     // Maximum pages to crawl
+const DELAY_MS = 1000;    // Delay between requests (ms) to make it more natural
+const TIMEOUT_MS = 8000;  // Request timeout (max wait time on fetch)
 ``` 
 
 ---
@@ -39,7 +54,9 @@ npm start
 
 ## 🧠 Architecture
 
+```text
 Crawler → Tor (SOCKS5) → Internet / Onion Network
+```
 
 * Routes traffic through Tor for anonymity
 * Parses HTML and extracts links

@@ -23,7 +23,21 @@ function normalizeUrls(urls) {
 }
 
 function buildQueue(finalUrls) {
-    return [...finalUrls];
+    const queue = [];
+
+    for (const url of finalUrls) {
+        try {
+            const parsed = new URL(url);
+            queue.push({
+                url,
+                baseHost: parsed.hostname.toLowerCase()
+            });
+        } catch {
+            // skip invalid urls
+        }
+    }
+
+    return queue;
 }
 
 function isOnion(url) {
