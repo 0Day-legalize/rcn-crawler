@@ -8,177 +8,198 @@
   Dark Web Crawler • Onion Support • Queue Engine
 </p>
 
+<p align="center">
+
+![Node](https://img.shields.io/badge/node-%3E=18-green)
+![Status](https://img.shields.io/badge/status-active-success)
+![Tor](https://img.shields.io/badge/tor-supported-purple)
+
+</p>
+
+---
+
+## ⚡ Quick Start
+
+git clone https://github.com/0Day-legalize/WebCrawler.git
+cd WebCrawler/rcn-crawler
+npm install
+npm start
+
 ---
 
 ## 🚀 Features
 
-- 🌐 Crawl standard websites  
-- 🧅 Full `.onion` support via Tor  
-- 🔁 Queue-based crawling (no duplicates)  
-- ⚡ Fast parsing with Axios + Cheerio  
+* 🌐 Crawl standard websites
+* 🧅 Full .onion support via Tor
+* 🔁 Queue-based crawling (no duplicates)
+* 🔒 Same-domain link filtering
+* ⚡ Fast parsing with Axios + Cheerio
 
 ---
 
 ## 🧠 Architecture
 
-```
 Crawler → Tor (SOCKS5) → Internet / Onion Network
-```
 
-- Routes traffic through Tor for anonymity  
-- Parses HTML and extracts links  
-- Tracks visited URLs to avoid loops  
+* Routes traffic through Tor for anonymity
+* Parses HTML and extracts links
+* Tracks visited URLs to avoid loops
 
 ---
 
-## ⚙️ Setup
+## ⚙️ Requirements
 
-### 1. Install Node.js (LTS)
+* Node.js (LTS recommended)
+* Tor (required for .onion)
 
-```bash
+Check installation:
+
 node -v
 npm -v
-```
 
 ---
 
-### 2. Install Dependencies
+## 📦 Installation
 
-```bash
-npm install axios cheerio socks-proxy-agent
-```
+1. Clone the repository
 
----
+git clone https://github.com/0Day-legalize/WebCrawler.git
+cd WebCrawler/rcn-crawler
 
-## 📁 Structure
+2. Install dependencies
 
-```
-/project
- ├── RCNCrawler.js
- ├── urls.txt
- └── package.json
-```
+npm install
 
 ---
 
-## 📄 Input (`urls.txt`)
+## 📄 Input (urls.txt)
 
-```txt
+Add seed URLs (one per line):
+
 https://example.com
 http://exampleonionaddress.onion/
-```
 
-**Rules**
-- One URL per line  
-- Must include protocol (`http://` or `https://`)  
-- No commas or quotes  
+Rules:
+
+* One URL per line
+* Must include protocol (http:// or https://)
+* No commas or quotes
 
 ---
 
 ## 🧅 Tor Setup
 
-### 🪟 Windows
+### Windows
 
-```
-# Extract Tor to:
+Download Tor: https://www.torproject.org/
+
+Extract to:
 C:\tor
 
-# Create config:
+Create config:
 C:\tor\torrc
-```
 
-**torrc**
-```
+torrc:
+
 SocksPort 127.0.0.1:9050
 DataDirectory C:\tor\data
-```
 
-```
-# Start Tor
+Start Tor:
+
 cd C:\tor
 .\tor.exe -f .\torrc
-```
 
 Wait for:
-```
+
 Bootstrapped 100% (done)
-```
 
 ---
 
-### 🐧 Linux
+### Linux
 
-```bash
 sudo apt update
 sudo apt install tor
 
 sudo systemctl start tor
 sudo systemctl enable tor
-```
 
 ---
 
 ## 🔌 Verify Tor
 
-**Windows**
-```powershell
-Test-NetConnection 127.0.0.1 -Port 9050
-```
+Windows:
 
-**Linux**
-```bash
+Test-NetConnection 127.0.0.1 -Port 9050
+
+Linux:
+
 ss -tulnp | grep 9050
-```
 
 Expected:
-```
+
 Port 9050 is open
-```
 
 ---
 
-## ⚠️ Proxy (Critical)
+## 🚀 Run the crawler
 
-```js
-const agent = new SocksProxyAgent("socks5h://127.0.0.1:9050");
-```
-
-### Why `socks5h`?
-
-- ✅ DNS via Tor → required for `.onion`  
-- ❌ `socks5` leaks DNS outside Tor  
+npm start
 
 ---
 
-## 🚀 Usage 
+## 🧪 Example Output
 
-```sh
-1. git clone https://github.com/0Day-legalize/WebCrawler.git
+Tor detected on port 9050
+Processing: https://example.com
+Status: 200
+Links found: 5
 
-2. cd rcn-crawler
-
-3. npm install
-
-4. Add more urls to urls.txt
-
-5. make sure tor is running
-
-6. npm start
-```
+Total processed: 5
+Total visited: 5
 
 ---
 
-## 🛠️ Notes
+## 📁 Project Structure
 
-- `.onion` requires Tor — won’t work otherwise  
-- Crawling is slower due to Tor routing  
-- Some sites block bots or rate-limit  
+rcn-crawler/
+├── src/
+│   ├── crawl/
+│   ├── http/
+│   ├── parser/
+│   ├── tor/
+│   ├── utils/
+│   └── main.js
+├── urls.txt
+├── package.json
+
+---
+
+## ⚠️ Notes
+
+* .onion requires Tor — will fail otherwise
+* Crawling is slower due to Tor routing
+* Some sites may block or rate-limit requests
+* Only same-domain links are followed
 
 ---
 
 ## 📌 Roadmap
 
-- [ ] Depth limiting  
-- [ ] Concurrency control  
-- [ ] Output (JSON / CSV)  
-- [ ] Retry & error handling  
+* Depth limiting
+* Concurrency (parallel crawling)
+* Output (JSON / CSV)
+* Retry & error handling
+* Tor identity rotation
+
+---
+
+## ⚖️ Disclaimer
+
+This project is for educational and research purposes only.
+Do not use it to crawl systems without permission.
+
+---
+
+## 👨‍💻 Author
+
+RCN Project
