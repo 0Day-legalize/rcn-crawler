@@ -1,3 +1,5 @@
+/* I need to add more comments */
+
 const { DEBUG_LINKS, MAX_PAGES, DELAY_MS, MAX_CONCURRENT_DOMAINS, MAX_CONCURRENT_REQUESTS } = require("../config");
 const { sleep, Semaphore } = require("../utils/sleep");
 const { fetchUrl } = require("../http/fetchUrl");
