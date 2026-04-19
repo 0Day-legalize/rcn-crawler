@@ -1,13 +1,19 @@
 # 🕷️ RCN WebCrawler
 
 <p align="center">
-  <img src="./assets/logo.png" width="320"><br><br>
+  <img src="./assets/logo.png" width="320">
+</p>
 
-  Dark Web Crawler • Onion Support • Queue Engine<br><br>
+<p align="center">
+  Dark Web Crawler • Onion Support • Queue Engine
+</p>
 
-  <img src="https://img.shields.io/badge/node-%3E=18-green" />
-  <img src="https://img.shields.io/badge/status-active-success" />
-  <img src="https://img.shields.io/badge/tor-supported-purple" />
+<p align="center">
+
+[![Node](https://img.shields.io/badge/node-%3E=18-green)](https://nodejs.org/)
+[![Status](https://img.shields.io/badge/status-active-success)]()
+[![Tor](https://img.shields.io/badge/tor-supported-purple)](https://www.torproject.org/)
+
 </p>
 
 ---
