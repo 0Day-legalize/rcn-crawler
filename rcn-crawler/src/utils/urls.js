@@ -1,3 +1,5 @@
+const ALLOWED_PROTOCOLS = new Set(["http:", "https:"]);
+
 function cleanUrls(fileContent) {
     return fileContent
     .split(/\r?\n/)
@@ -11,6 +13,10 @@ function normalizeUrls(urls) {
     for (const rawUrl of urls) {
         try {
             const parsed = new URL(rawUrl);
+            if (!ALLOWED_PROTOCOLS.has(parsed.protocol)) {
+                console.log(`Skipping invalid seed URL: ${rawUrl}`);
+                continue;
+            }
             parsed.hostname = parsed.hostname.toLowerCase();
             parsed.hash = "";
             uniqueUrls.add(parsed.toString());
@@ -52,9 +58,11 @@ function normalizeLink(url, baseUrl = null) {
     try {
         const parsed = baseUrl ? new URL(url, baseUrl) : new URL(url);
 
+        if (!ALLOWED_PROTOCOLS.has(parsed.protocol)) return null;
+
         parsed.hostname = parsed.hostname.toLowerCase();
         parsed.hash = "";
-        // remove trailig / bug fix
+        // remove trailing /
         if (parsed.pathname !== "/" && parsed.pathname.endsWith("/")) {
             parsed.pathname = parsed.pathname.slice(0, -1);
         }

@@ -11,6 +11,8 @@ async function fetchUrl(url, torAgent) {
             responseType: "text",
             validateStatus: () => true,
             maxRedirects: 5,
+            maxContentLength: 5 * 1024 * 1024,
+            maxBodyLength: 5 * 1024 * 1024,
             httpAgent: useTor ? torAgent : undefined,
             httpsAgent: useTor ? torAgent : undefined
             });
