@@ -268,14 +268,27 @@ rcn-crawler/
 
 ---
 
-## 📌 Roadmap
+## 🚧 In Progress
 
-* Multi-domain crawling
-* External configuration support
-* Structured result export
-* Command-line arguments
-* Docker support
-* Kata-friendly runtime notes
+⏳ External configuration file (JSON/YAML instead of only CLI)
+⏳ Cross-domain crawling mode (optional, currently same-domain per crawl)
+---
+
+## 🔜 Planned
+🔲 Docker support (containerized crawler runtime)
+🔲 Kata Containers integration (secure, isolated execution)
+🔲 Advanced rate limiting (per-domain adaptive throttling)
+🔲 Headless browser support (Puppeteer for JS-heavy sites)
+🔲 Logging & metrics (structured logs, crawl stats)
+
+---
+
+## 🧠 Long-Term
+
+🔲 Distributed crawling (multiple workers / nodes)
+🔲 Storage backend (database instead of JSON files)
+🔲 OSINT modules (metadata extraction, fingerprinting)
+🔲 Crawl scheduling (cron / periodic jobs)
 
 ---
 
