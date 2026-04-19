@@ -55,7 +55,8 @@ Crawler → Tor (SOCKS5) → Internet / Onion Network
 * Tor (required for .onion)
 
 Check installation:
-```shell
+
+```bash
 node -v
 npm -v
 ```
@@ -65,14 +66,16 @@ npm -v
 
 1. Clone the repository
 
-```shell
+```bash
 git clone https://github.com/0Day-legalize/WebCrawler.git
 cd WebCrawler/rcn-crawler
 ```
 
 2. Install dependencies
 
+```bash
 npm install
+```
 
 ---
 
@@ -98,34 +101,46 @@ Rules:
 Download Tor: https://www.torproject.org/
 
 Extract to:
+```bash
 C:\tor
+```
 
 Create config:
+
+```bash
 C:\tor\torrc
+```
 
-torrc:
+torrc paste:
 
+```text
 SocksPort 127.0.0.1:9050
 DataDirectory C:\tor\data
+```
 
 Start Tor:
 
+```bash
 cd C:\tor
 .\tor.exe -f .\torrc
-
+``` 
 Wait for:
 
+```text
 Bootstrapped 100% (done)
+```
 
 ---
 
 ### Linux
 
+```bash
 sudo apt update
 sudo apt install tor
 
 sudo systemctl start tor
 sudo systemctl enable tor
+```
 
 ---
 
@@ -133,11 +148,13 @@ sudo systemctl enable tor
 
 Windows:
 
+```bash
 Test-NetConnection 127.0.0.1 -Port 9050
+```
 
 Linux:
 
-```shell
+```bash
 ss -tulnp | grep 9050
 ```
 
@@ -151,7 +168,7 @@ Port 9050 is open
 
 ## 🚀 Run the crawler
 
-```shell
+```bash
 npm start
 ```
 
