@@ -14,6 +14,29 @@ function sleep(ms) {
 }
 
 /**
+ * Pauses execution for a randomised duration around `ms`.
+ *
+ * Jitter breaks the periodic timing fingerprint that a fixed delay between
+ * requests produces. The actual wait is drawn uniformly from
+ *   [ms * (1 - fraction), ms * (1 + fraction)]
+ * and clamped at 0 so callers cannot accidentally pass a negative delay.
+ *
+ * Use this for every inter-request delay in the crawl loop. Plain `sleep`
+ * is fine for internal pacing that isn't observable to a remote server
+ * (e.g. the 100ms dispatcher re-check).
+ *
+ * @param {number} ms       - Mean delay in milliseconds
+ * @param {number} fraction - Jitter amplitude as a fraction of ms (e.g. 0.25 = ±25%)
+ * @returns {Promise<void>}
+ */
+function jitteredSleep(ms, fraction) {
+    const spread = ms * fraction;
+    const delta  = (Math.random() * 2 - 1) * spread; // uniform in [-spread, +spread]
+    const actual = Math.max(0, ms + delta);
+    return sleep(actual);
+}
+
+/**
  * A promise-based semaphore that limits the number of async tasks
  * running at the same time.
  *
@@ -70,4 +93,4 @@ class Semaphore {
     }
 }
 
-module.exports = { sleep, Semaphore };
+module.exports = { sleep, jitteredSleep, Semaphore };

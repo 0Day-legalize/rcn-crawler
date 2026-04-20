@@ -1,13 +1,18 @@
 /**
  * @file fetchUrl.js
  * @description HTTP fetcher with SSRF protection, manual redirect handling,
- * gzip bomb defence, and response size capping.
+ * gzip bomb defence, response size capping, and browser-fingerprint hardening.
  */
 
 const axios           = require("axios");
 const zlib            = require("node:zlib");
 const { PassThrough } = require("node:stream");
-const { TIMEOUT_MS, MAX_RESPONSE_SIZE, USER_AGENTS } = require("../config");
+const {
+    TIMEOUT_MS,
+    MAX_RESPONSE_SIZE,
+    USER_AGENT_PROFILES,
+    ACCEPT_LANGUAGES,
+} = require("../config");
 const { isOnion }   = require("../utils/urls");
 const { isSafeUrl } = require("../utils/ipSafety");
 
@@ -22,13 +27,128 @@ const MAX_REDIRECTS = 5;
 const MAX_COMPRESSED_BYTES = 2 * 1024 * 1024;
 
 /**
- * Returns a random User-Agent string from the configured pool.
- * Called on every outgoing request to reduce fingerprinting.
- *
- * @returns {string} - A browser-style User-Agent header value
+ * Accept header value used on every request. Matches the long form that
+ * Chromium sends by default — sending the short `text/html,application/xhtml+xml`
+ * string is a crawler tell, since real browsers advertise image and signed
+ * exchange formats too.
  */
-function randomUserAgent() {
-    return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+const DEFAULT_ACCEPT =
+    "text/html,application/xhtml+xml,application/xml;q=0.9," +
+    "image/avif,image/webp,image/apng,*/*;q=0.8," +
+    "application/signed-exchange;v=b3;q=0.7";
+
+/**
+ * Returns a random browser profile from the configured pool.
+ *
+ * Each profile bundles a User-Agent with the Client Hint headers that the
+ * matching browser actually sends. Keeping the two tied together prevents
+ * the common "Chrome UA with no Sec-CH-UA" or "Firefox UA with Sec-CH-UA"
+ * mismatch that flags obvious crawlers.
+ *
+ * @returns {{ua: string, secChUa?: string, secChUaMobile?: string, secChUaPlatform?: string}}
+ */
+function pickProfile() {
+    return USER_AGENT_PROFILES[Math.floor(Math.random() * USER_AGENT_PROFILES.length)];
+}
+
+/**
+ * Picks a random Accept-Language value from the configured pool.
+ *
+ * @returns {string}
+ */
+function pickAcceptLanguage() {
+    return ACCEPT_LANGUAGES[Math.floor(Math.random() * ACCEPT_LANGUAGES.length)];
+}
+
+/**
+ * Shuffles an array in place using Fisher-Yates.
+ *
+ * @template T
+ * @param {T[]} items
+ * @returns {T[]} the same array, reordered
+ */
+function shuffle(items) {
+    for (let i = items.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [items[i], items[j]] = [items[j], items[i]];
+    }
+    return items;
+}
+
+/**
+ * Computes a same-origin-safe Referer value for cross-origin requests.
+ *
+ * Mirrors the `strict-origin-when-cross-origin` referrer policy that modern
+ * browsers apply by default:
+ *   - same-origin target: full previous URL
+ *   - cross-origin target: just the origin of the previous URL
+ *   - downgrades (https -> http) or invalid URLs: no Referer
+ *
+ * Returning null means "do not set Referer at all" — which is the correct
+ * behaviour for seed URLs (no previous page) and HTTPS -> HTTP hops.
+ *
+ * @param {string|undefined|null} referrer  - URL of the page that linked to `target`
+ * @param {string} target                    - Absolute URL about to be requested
+ * @returns {string|null}
+ */
+function buildReferer(referrer, target) {
+    if (!referrer) return null;
+
+    let src, dst;
+    try {
+        src = new URL(referrer);
+        dst = new URL(target);
+    } catch {
+        return null;
+    }
+
+    // Never downgrade the scheme when sending Referer (browsers strip it).
+    if (src.protocol === "https:" && dst.protocol === "http:") return null;
+
+    if (src.origin === dst.origin) return src.href;
+    return `${src.origin}/`;
+}
+
+/**
+ * Assembles the full request header set for a single fetch.
+ *
+ * All per-request randomisation lives here so the shape of a request — the
+ * set of headers, their values, and their transmission order — varies across
+ * requests the way a real browsing session does.
+ *
+ * @param {string} target                     - Absolute URL being requested
+ * @param {string|undefined|null} referrer    - URL of the page that linked here (if any)
+ * @returns {Record<string,string>}           - Header object in randomised insertion order
+ */
+function buildHeaders(target, referrer) {
+    const profile = pickProfile();
+
+    // Build the header list as [key, value] pairs so we can shuffle the order
+    // before turning it into an object. Node's HTTP client preserves object
+    // key insertion order, so a shuffled object yields a shuffled wire order.
+    const pairs = [
+        ["User-Agent",      profile.ua],
+        ["Accept",          DEFAULT_ACCEPT],
+        ["Accept-Language", pickAcceptLanguage()],
+        // `br` (Brotli) is handled by decompressStream below.
+        ["Accept-Encoding", "gzip, deflate, br"],
+    ];
+
+    // Client Hints: Chromium profiles carry them; Firefox/Safari profiles
+    // must NOT — an inconsistent hint set is a stronger fingerprint than
+    // sending nothing.
+    if (profile.secChUa) {
+        pairs.push(["Sec-CH-UA",          profile.secChUa]);
+        pairs.push(["Sec-CH-UA-Mobile",   profile.secChUaMobile]);
+        pairs.push(["Sec-CH-UA-Platform", profile.secChUaPlatform]);
+    }
+
+    const referer = buildReferer(referrer, target);
+    if (referer) pairs.push(["Referer", referer]);
+
+    const headers = {};
+    for (const [k, v] of shuffle(pairs)) headers[k] = v;
+    return headers;
 }
 
 /**
@@ -36,17 +156,19 @@ function randomUserAgent() {
  * and response size limits.
  *
  * @async
- * @param {string} url       - Absolute URL to fetch
- * @param {object} torAgent  - SOCKS5 proxy agent (SocksProxyAgent instance)
+ * @param {string} url                        - Absolute URL to fetch
+ * @param {object} torAgent                   - SOCKS5 proxy agent (SocksProxyAgent instance)
+ * @param {string|undefined|null} [referrer]  - URL of the page that linked to `url`, if any.
+ *                                              Used to set a realistic Referer header.
  * @returns {Promise<{url: string, status?: number, server?: string|null, poweredBy?: string|null, html?: string, error?: string}>}
  */
-async function fetchUrl(url, torAgent) {
+async function fetchUrl(url, torAgent, referrer) {
     if (!(await isSafeUrl(url))) {
         return { url, error: "Blocked: URL resolves to a private/internal address" };
     }
 
     try {
-        const response = await makeRequest(url, torAgent);
+        const response = await makeRequest(url, torAgent, referrer);
 
         if (response.status >= 300 && response.status < 400) {
             return await followRedirects(url, response, torAgent, 0);
@@ -69,11 +191,12 @@ async function fetchUrl(url, torAgent) {
  * Decompression is also disabled so size caps can be applied manually.
  *
  * @async
- * @param {string} url      - Absolute URL to request
- * @param {object} torAgent - SOCKS5 proxy agent
+ * @param {string} url                        - Absolute URL to request
+ * @param {object} torAgent                   - SOCKS5 proxy agent
+ * @param {string|undefined|null} [referrer]  - URL of the page that linked to `url`, if any
  * @returns {Promise<import("axios").AxiosResponse>}
  */
-async function makeRequest(url, torAgent) {
+async function makeRequest(url, torAgent, referrer) {
     const useTor = isOnion(url);
     return axios.get(url, {
         timeout:        TIMEOUT_MS,
@@ -83,17 +206,16 @@ async function makeRequest(url, torAgent) {
         decompress:     false,   // decompression handled manually (gzip bomb protection)
         httpAgent:      useTor ? torAgent : undefined,
         httpsAgent:     useTor ? torAgent : undefined,
-        headers: {
-            "User-Agent":      randomUserAgent(),
-            "Accept":          "text/html,application/xhtml+xml",
-            "Accept-Encoding": "gzip, deflate",
-        },
+        headers:        buildHeaders(url, referrer),
     });
 }
 
 /**
  * Follows a redirect chain up to MAX_REDIRECTS hops, performing an SSRF
  * check on every Location header before issuing the next request.
+ *
+ * The previous URL in the chain is used as the referrer for the next hop,
+ * matching how real browsers propagate Referer across redirects.
  *
  * @async
  * @param {string} originalUrl                      - URL that produced the first redirect
@@ -124,7 +246,7 @@ async function followRedirects(originalUrl, response, torAgent, depth) {
     }
 
     try {
-        const nextResponse = await makeRequest(nextUrl, torAgent);
+        const nextResponse = await makeRequest(nextUrl, torAgent, originalUrl);
 
         if (nextResponse.status >= 300 && nextResponse.status < 400) {
             return await followRedirects(nextUrl, nextResponse, torAgent, depth + 1);
@@ -166,6 +288,10 @@ function buildResult(url, response, html) {
  *   2. MAX_RESPONSE_SIZE    — applied to the decompressed output
  * Both caps protect against gzip bomb attacks.
  *
+ * Supports gzip, deflate, and brotli. Brotli is included because we now
+ * advertise `br` in Accept-Encoding — if we only supported gzip/deflate,
+ * real browsers would look suspicious by comparison.
+ *
  * @async
  * @param {import("axios").AxiosResponse} response - Streaming HTTP response
  * @returns {Promise<string|null>} - Decoded response body, or null if a cap was exceeded
@@ -181,6 +307,8 @@ async function decompressStream(response) {
         stream = capped.pipe(zlib.createGunzip());
     } else if (encoding === "deflate") {
         stream = capped.pipe(zlib.createInflate());
+    } else if (encoding === "br") {
+        stream = capped.pipe(zlib.createBrotliDecompress());
     } else {
         stream = capped;
     }
@@ -247,4 +375,4 @@ function readStream(stream, maxBytes) {
     });
 }
 
-module.exports = { fetchUrl };
+module.exports = { fetchUrl, buildHeaders };
