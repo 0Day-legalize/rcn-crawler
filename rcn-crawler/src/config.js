@@ -1,4 +1,18 @@
+/**
+ * @file config.js
+ * @description CLI argument parser and central configuration for RCN WebCrawler.
+ * All runtime settings are resolved once at startup and exported as constants.
+ * CLI flags always override the hardcoded defaults.
+ */
+
 // ---------- CLI HELP ----------
+
+/**
+ * Prints usage instructions to stdout and exits.
+ * Triggered by the --help flag.
+ *
+ * @returns {void}
+ */
 function showHelp() {
     console.log(`
 🕷️ RCN WebCrawler
@@ -33,6 +47,14 @@ if (process.argv.includes("--help")) {
 }
 
 // ---------- CLI ARG PARSER ----------
+
+/**
+ * Reads a named CLI flag of the form --name=value.
+ *
+ * @param {string} name         - Flag name without the leading --
+ * @param {string} defaultValue - Value to return when the flag is absent
+ * @returns {string}            - Raw string value of the flag or the default
+ */
 function getArg(name, defaultValue) {
     const prefix = `--${name}=`;
     const arg = process.argv.find(a => a.startsWith(prefix));
@@ -40,29 +62,73 @@ function getArg(name, defaultValue) {
 }
 
 // ---------- CONFIG VALUES ----------
-const DEBUG_LINKS             = getArg("debug", "true") === "true";
-const MAX_PAGES               = Number(getArg("max-pages", 0));    // 0 = unlimited
-const DELAY_MS                = Number(getArg("delay", 1000));
-const TIMEOUT_MS              = Number(getArg("timeout", 8000));
-const MAX_CONCURRENT_DOMAINS  = Number(getArg("max-concurrent-domains", 3));
+
+/** @type {boolean} Print extracted links to the console when true. */
+const DEBUG_LINKS = getArg("debug", "true") === "true";
+
+/**
+ * Maximum number of pages to process before stopping.
+ * Set to 0 for unlimited (default) — the crawl runs until no new links are found.
+ * @type {number}
+ */
+const MAX_PAGES = Number(getArg("max-pages", 0));
+
+/** @type {number} Milliseconds to wait between requests on the same domain. */
+const DELAY_MS = Number(getArg("delay", 1000));
+
+/** @type {number} Milliseconds before an individual HTTP request times out. */
+const TIMEOUT_MS = Number(getArg("timeout", 8000));
+
+/** @type {number} How many domains are crawled concurrently. */
+const MAX_CONCURRENT_DOMAINS = Number(getArg("max-concurrent-domains", 3));
+
+/**
+ * How many pages within a single domain are fetched simultaneously.
+ * Total concurrent connections = MAX_CONCURRENT_DOMAINS × MAX_CONCURRENT_REQUESTS.
+ * @type {number}
+ */
 const MAX_CONCURRENT_REQUESTS = Number(getArg("max-concurrent-requests", 2));
 
-// Max decompressed bytes read from a page (5MB) — prevents memory crash
+/**
+ * Maximum decompressed response body size in bytes (5 MB).
+ * Requests exceeding this limit are aborted to prevent memory exhaustion.
+ * @type {number}
+ */
 const MAX_RESPONSE_SIZE = 5 * 1024 * 1024;
 
-// Max bytes read from robots.txt (100KB)
+/**
+ * Maximum size of a fetched robots.txt in bytes (100 KB).
+ * Oversized files are treated as empty to prevent memory exhaustion.
+ * @type {number}
+ */
 const MAX_ROBOTS_SIZE = 100 * 1024;
 
-// Max links extracted from a single page — prevents queue explosion
+/**
+ * Maximum number of links extracted from a single page.
+ * Prevents the shared queue from exploding on link-farm pages.
+ * @type {number}
+ */
 const MAX_LINKS_PER_PAGE = 500;
 
-// Max length of a single href value — prevents ReDoS on pathological input
+/**
+ * Maximum character length of a single href attribute value.
+ * Hrefs longer than this are dropped before URL parsing (ReDoS protection).
+ * @type {number}
+ */
 const MAX_HREF_LENGTH = 2048;
 
-// How many pages to crawl between visited.json writes (reduces disk I/O)
+/**
+ * Number of pages crawled between batched writes to visited.json.
+ * Lower values increase durability; higher values reduce disk I/O.
+ * @type {number}
+ */
 const VISITED_SAVE_INTERVAL = 10;
 
-// Rotated per request to avoid fingerprinting
+/**
+ * Pool of real browser User-Agent strings rotated per request.
+ * Prevents fingerprinting by keeping a consistent UA across a session.
+ * @type {string[]}
+ */
 const USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15",
@@ -70,10 +136,18 @@ const USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0",
 ];
 
-const TOR_HOST  = "127.0.0.1";
+/** @type {string} Loopback address where the Tor SOCKS5 proxy is expected. */
+const TOR_HOST = "127.0.0.1";
+
+/**
+ * Ordered list of SOCKS5 ports to probe when detecting Tor.
+ * 9050 is the system Tor daemon; 9150 is Tor Browser.
+ * @type {number[]}
+ */
 const TOR_PORTS = [9050, 9150];
 
 // ---------- EXPORT ----------
+
 module.exports = {
     DEBUG_LINKS,
     MAX_PAGES,
@@ -88,5 +162,5 @@ module.exports = {
     VISITED_SAVE_INTERVAL,
     USER_AGENTS,
     TOR_HOST,
-    TOR_PORTS
+    TOR_PORTS,
 };

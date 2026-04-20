@@ -1,15 +1,43 @@
+/**
+ * @file getRobots.js
+ * @description Fetches, parses, and caches robots.txt for each domain.
+ * Cache entries expire after 30 minutes so long-running crawls pick up rule changes.
+ */
+
 const axios = require("axios");
 const { MAX_ROBOTS_SIZE, USER_AGENTS } = require("../config");
 
-// Cache entries expire after 30 minutes so long-running crawls pick up changes
+/** @type {number} Cache TTL in milliseconds (30 minutes). */
 const CACHE_TTL_MS = 30 * 60 * 1000;
 
-const cache = new Map(); // baseHost → { rules, expiresAt }
+/**
+ * In-memory robots.txt cache.
+ * Keys are base hostnames; values are { rules, expiresAt }.
+ * @type {Map<string, {rules: string[], expiresAt: number}>}
+ */
+const cache = new Map();
 
+/**
+ * Returns a random User-Agent string from the configured pool.
+ *
+ * @returns {string}
+ */
 function randomUserAgent() {
     return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
 }
 
+/**
+ * Returns the list of disallowed path prefixes for the given domain.
+ * Results are cached for CACHE_TTL_MS milliseconds.
+ *
+ * Failure modes (network error, 4xx status, oversized response) all return
+ * an empty rules array so the crawl continues unblocked.
+ *
+ * @async
+ * @param {string} baseHost  - Hostname of the target domain (e.g. "example.com")
+ * @param {object} torAgent  - SOCKS5 proxy agent used for the robots.txt request
+ * @returns {Promise<string[]>} - Array of disallowed path prefixes from User-agent: *
+ */
 async function getRobots(baseHost, torAgent) {
     const cached = cache.get(baseHost);
     if (cached && Date.now() < cached.expiresAt) {
@@ -20,13 +48,13 @@ async function getRobots(baseHost, torAgent) {
 
     try {
         const response = await axios.get(url, {
-            timeout: 5000,
-            responseType: "stream",          // stream so we can enforce size cap
+            timeout:        5000,
+            responseType:   "stream",
             validateStatus: () => true,
-            maxRedirects: 3,
-            httpAgent:  torAgent,
-            httpsAgent: torAgent,
-            headers: { "User-Agent": randomUserAgent() }
+            maxRedirects:   3,
+            httpAgent:      torAgent,
+            httpsAgent:     torAgent,
+            headers:        { "User-Agent": randomUserAgent() },
         });
 
         if (response.status >= 400) {
@@ -34,7 +62,6 @@ async function getRobots(baseHost, torAgent) {
             return [];
         }
 
-        // Read up to MAX_ROBOTS_SIZE — treat oversized robots.txt as empty
         const text = await readStream(response.data, MAX_ROBOTS_SIZE);
 
         if (text === null) {
@@ -53,11 +80,25 @@ async function getRobots(baseHost, torAgent) {
     }
 }
 
+/**
+ * Stores parsed robots rules in the cache with a TTL-based expiry timestamp.
+ *
+ * @param {string}   baseHost - Hostname to cache rules for
+ * @param {string[]} rules    - Parsed disallowed path prefixes
+ * @returns {void}
+ */
 function setCache(baseHost, rules) {
     cache.set(baseHost, { rules, expiresAt: Date.now() + CACHE_TTL_MS });
 }
 
-// Reads a stream up to maxBytes — returns null if exceeded
+/**
+ * Reads a Node.js readable stream into a string, up to maxBytes.
+ * Returns null if the byte limit is exceeded (signals oversized response).
+ *
+ * @param {import("stream").Readable} stream - Stream to read
+ * @param {number} maxBytes                  - Maximum bytes to accept
+ * @returns {Promise<string|null>}
+ */
 function readStream(stream, maxBytes) {
     return new Promise((resolve, reject) => {
         const chunks = [];
@@ -78,14 +119,20 @@ function readStream(stream, maxBytes) {
     });
 }
 
+/**
+ * Parses robots.txt text and extracts Disallow paths for the wildcard agent (*).
+ * Only User-agent: * blocks are processed; all other agents are ignored.
+ *
+ * @param {string}   text - Raw robots.txt content
+ * @returns {string[]}    - Disallowed path prefixes (e.g. ["/admin", "/private/"])
+ */
 function parseRobots(text) {
-    const lines = text.split(/\r?\n/);
-    const rules = [];
-    let applies = false;
+    const lines   = text.split(/\r?\n/);
+    const rules   = [];
+    let applies   = false;
 
     for (let line of lines) {
         line = line.trim();
-
         if (!line || line.startsWith("#")) continue;
 
         if (line.toLowerCase().startsWith("user-agent:")) {
@@ -95,8 +142,8 @@ function parseRobots(text) {
         }
 
         if (applies && line.toLowerCase().startsWith("disallow:")) {
-            const path = line.slice("disallow:".length).trim();
-            if (path) rules.push(path);
+            const rulePath = line.slice("disallow:".length).trim();
+            if (rulePath) rules.push(rulePath);
         }
     }
 
