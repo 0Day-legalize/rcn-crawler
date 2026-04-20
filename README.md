@@ -23,7 +23,7 @@ npm install
 npm start
 ```
 
-Output → `results.json` + `unique-links.json` + `visited.json`
+Output → `results.json` +  `visited.json`
 
 ---
 
