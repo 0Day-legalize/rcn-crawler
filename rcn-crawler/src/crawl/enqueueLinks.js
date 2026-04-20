@@ -1,22 +1,22 @@
-function enqueueSameDomainLinks(links, queue, visited, queued, baseHost) {
+function enqueueLinks(links, queue, visited, queued) {
     for (const link of links) {
         try {
             const parsed = new URL(link);
+            const normalizedHost = parsed.hostname.toLowerCase();
 
-            if (parsed.hostname.toLowerCase() !== baseHost) continue;
             if (visited.has(link)) continue;
             if (queued.has(link)) continue;
 
             queue.push({
                 url: link,
-                baseHost
+                baseHost: normalizedHost
             });
 
             queued.add(link);
         } catch {
-            // ignore invalid links
+            // Ignore malformed links
         }
     }
 }
 
-module.exports = { enqueueSameDomainLinks };
+module.exports = { enqueueLinks };

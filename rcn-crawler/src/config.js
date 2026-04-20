@@ -7,7 +7,7 @@ Usage:
     node src/main.js [options]
 
 Options:
-    --max-pages=NUMBER              Max pages to crawl (default: 20)
+    --max-pages=NUMBER              Max pages to crawl, 0 = unlimited (default: 0)
     --delay=MS                      Delay between requests (default: 1000)
     --timeout=MS                    Request timeout (default: 8000)
     --debug=true|false              Show extracted links (default: true)
@@ -16,12 +16,14 @@ Options:
     --help                          Show this help message
 
 Examples:
-    node src/main.js --max-pages=50
+    node src/main.js                          Runs forever until no links remain
+    node src/main.js --max-pages=500          Stop after 500 pages
     node src/main.js --delay=500 --debug=false
     node src/main.js --max-concurrent-domains=5 --max-concurrent-requests=3
 
 Notes:
     Make sure Tor is running for .onion crawling
+    visited.json is saved every ${VISITED_SAVE_INTERVAL} pages so progress survives restarts
 `);
 }
 
@@ -39,7 +41,7 @@ function getArg(name, defaultValue) {
 
 // ---------- CONFIG VALUES ----------
 const DEBUG_LINKS             = getArg("debug", "true") === "true";
-const MAX_PAGES               = Number(getArg("max-pages", 20));
+const MAX_PAGES               = Number(getArg("max-pages", 0));    // 0 = unlimited
 const DELAY_MS                = Number(getArg("delay", 1000));
 const TIMEOUT_MS              = Number(getArg("timeout", 8000));
 const MAX_CONCURRENT_DOMAINS  = Number(getArg("max-concurrent-domains", 3));
