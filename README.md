@@ -314,6 +314,8 @@ rcn-crawler/
 🔲 Adaptive rate limiting (per-domain throttling based on response times)
 🔲 Headless browser support (Puppeteer for JS-heavy sites)
 🔲 Crawl metrics dashboard
+🔲 Searchterm crawling
+🔲 Captcha bypass
 ```
 
 ---
