@@ -5,7 +5,8 @@
  */
 
 const axios = require("axios");
-const { MAX_ROBOTS_SIZE, USER_AGENTS } = require("../config");
+const { MAX_ROBOTS_SIZE } = require("../config");
+const { buildHeaders }    = require("../http/fetchUrl");
 
 /** @type {number} Cache TTL in milliseconds (30 minutes). */
 const CACHE_TTL_MS = 30 * 60 * 1000;
@@ -16,15 +17,6 @@ const CACHE_TTL_MS = 30 * 60 * 1000;
  * @type {Map<string, {rules: string[], expiresAt: number}>}
  */
 const cache = new Map();
-
-/**
- * Returns a random User-Agent string from the configured pool.
- *
- * @returns {string}
- */
-function randomUserAgent() {
-    return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
-}
 
 /**
  * Returns the list of disallowed path prefixes for the given domain.
@@ -54,7 +46,11 @@ async function getRobots(baseHost, torAgent) {
             maxRedirects:   3,
             httpAgent:      torAgent,
             httpsAgent:     torAgent,
-            headers:        { "User-Agent": randomUserAgent() },
+            // Reuse the main fetcher's header builder so robots.txt requests
+            // present the same browser fingerprint surface as regular pages.
+            // A minimal "User-Agent: bot" robots request followed by a full
+            // browser-like page request would be a clean correlation signal.
+            headers:        buildHeaders(url, null),
         });
 
         if (response.status >= 400) {

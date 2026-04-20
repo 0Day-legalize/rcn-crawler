@@ -21,11 +21,12 @@ const {
     DEBUG_LINKS,
     MAX_PAGES,
     DELAY_MS,
+    DELAY_JITTER,
     MAX_CONCURRENT_DOMAINS,
     MAX_CONCURRENT_REQUESTS,
     VISITED_SAVE_INTERVAL,
 } = require("../config");
-const { sleep, Semaphore }  = require("../utils/sleep");
+const { sleep, jitteredSleep, Semaphore } = require("../utils/sleep");
 const { fetchUrl }          = require("../http/fetchUrl");
 const { parsePage }         = require("../parser/parseLinks");
 const { enqueueLinks }      = require("./enqueueLinks");
@@ -148,7 +149,7 @@ async function handleBlockedByRobots(next, baseHost, sharedCounters, sharedVisit
     sharedResults.push(buildBlockedResult(next, baseHost));
     saveProgress(sharedCounters.processed, sharedVisited.size, sharedResults);
     console.log("");
-    await sleep(DELAY_MS);
+    await jitteredSleep(DELAY_MS, DELAY_JITTER);
 }
 
 /**
@@ -168,7 +169,7 @@ async function handleFetchError(next, baseHost, error, sharedCounters, sharedVis
     sharedResults.push(buildErrorResult(next, baseHost, error));
     saveProgress(sharedCounters.processed, sharedVisited.size, sharedResults);
     console.log("");
-    await sleep(DELAY_MS);
+    await jitteredSleep(DELAY_MS, DELAY_JITTER);
 }
 
 /**
@@ -224,12 +225,15 @@ async function handleSuccess(ctx) {
     if (meta.title) console.log(`Title: ${meta.title}`);
     logLinks(allowedLinks);
 
-    enqueueLinks(allowedLinks, sharedQueue, sharedVisited, sharedQueued);
+    // Tag each newly discovered link with the page it was found on. The
+    // worker reads this back off the queue item and emits a realistic
+    // Referer header on the next request (see handleSuccess -> fetchUrl).
+    enqueueLinks(allowedLinks, sharedQueue, sharedVisited, sharedQueued, next);
 
     sharedResults.push(buildSuccessResult(next, baseHost, result, links, allowedLinks, downloads, meta));
     saveProgress(sharedCounters.processed, sharedVisited.size, sharedResults);
     console.log("");
-    await sleep(DELAY_MS);
+    await jitteredSleep(DELAY_MS, DELAY_JITTER);
 }
 
 // ─────────────────────────────────────────────
@@ -289,7 +293,7 @@ async function crawlDomain(baseHost, torPort, shared) {
 
         if (batch.length === 0) break;
 
-        await Promise.all(batch.map(async ({ url: next }) => {
+        await Promise.all(batch.map(async ({ url: next, referrer }) => {
             await sem.acquire();
             try {
                 if (sharedVisited.has(next))     return;
@@ -312,7 +316,10 @@ async function crawlDomain(baseHost, torPort, shared) {
                 }
 
                 console.log(`[${baseHost}] Processing: ${next}`);
-                const result = await fetchUrl(next, domainAgent);
+                // `referrer` is the URL of the page that linked to `next`, set by
+                // enqueueLinks when the link was discovered. fetchUrl uses it to
+                // build a strict-origin-when-cross-origin Referer header.
+                const result = await fetchUrl(next, domainAgent, referrer);
 
                 if (result.error) {
                     await handleFetchError(next, baseHost, result.error, sharedCounters, sharedVisited, sharedResults);
