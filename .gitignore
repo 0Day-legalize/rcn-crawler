@@ -1,0 +1,55 @@
+# ========================================
+# Ignore EVERYTHING by default
+# ========================================
+*
+
+# ========================================
+# Allow main project folders/files
+# ========================================
+!rcn-crawler/
+!assets/
+!README.md
+!.gitignore
+
+# ========================================
+# Allow contents inside allowed folders
+# ========================================
+!rcn-crawler/**
+!assets/**
+
+# ========================================
+# Always ignore dependencies
+# ========================================
+node_modules/
+
+# ========================================
+# Ignore crawler output (IMPORTANT)
+# ========================================
+rcn-crawler/results.json
+rcn-crawler/visited.json
+rcn-crawler/unique-links.json
+
+# ========================================
+# (Recommended) If using folders instead
+# ========================================
+rcn-crawler/output/
+rcn-crawler/data/
+
+# ========================================
+# OS / Editor junk
+# ========================================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ========================================
+# Logs
+# ========================================
+*.log
+
+# ========================================
+# Optional: environment files
+# ========================================
+.env
+.env.*
