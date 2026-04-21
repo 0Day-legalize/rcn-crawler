@@ -26,6 +26,7 @@ Options:
     --timeout=MS                    Request timeout (default: 20000)
     --debug=true|false              Show extracted links (default: true)
     --onion-only=true|false         Skip all non-.onion URLs (default: false)
+    --ignore-robots=true|false      Ignore robots.txt rules entirely (default: false)
     --max-concurrent-domains=N      Domains crawled in parallel (default: 3)
     --max-concurrent-requests=N     Requests in parallel per domain (default: 2)
     --help                          Show this help message
@@ -69,6 +70,9 @@ const DEBUG_LINKS = getArg("debug", "true") === "true";
 
 /** @type {boolean} When true, non-.onion URLs discovered during crawling are dropped at enqueue time. */
 const ONION_ONLY = getArg("onion-only", "false") === "true";
+
+/** @type {boolean} When true, robots.txt rules are not fetched or enforced. */
+const IGNORE_ROBOTS = getArg("ignore-robots", "false") === "true";
 
 /**
  * Maximum number of pages to process before stopping.
@@ -259,6 +263,7 @@ const TOR_PORTS = [9050, 9150];
 module.exports = {
     DEBUG_LINKS,
     ONION_ONLY,
+    IGNORE_ROBOTS,
     MAX_PAGES,
     DELAY_MS,
     DELAY_JITTER,

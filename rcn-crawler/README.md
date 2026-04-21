@@ -30,6 +30,7 @@ Output → `data/results.json` · `data/visited.json` · `data/unique-links.json
 ## 🚀 Features
 
 * 🌐 Crawl standard websites and `.onion` hidden services
+* 🗺️ Interactive connection map — force-directed domain graph with one command
 * 🧅 All traffic routed through Tor — clearnet and onion alike
 * 🔁 Indefinite crawling — runs until no new links are found
 * 🔀 Multi-domain crawling — follows cross-domain links automatically
@@ -213,6 +214,46 @@ Puppeteer launches a headless Chromium browser:
 * Waits for `DOMContentLoaded` + 2 s for JS execution before capturing HTML
 
 The Puppeteer browser is a shared singleton — one launch per run, one page opened and closed per request.
+
+---
+
+## 🗺️ Connection Map
+
+Generate an interactive visual graph of all domain connections discovered during a crawl:
+
+```bash
+npm run graph
+# then open:
+xdg-open data/graph.html      # Linux
+start data/graph.html          # Windows
+```
+
+The graph is written to `data/graph.html` as a self-contained file — open it in any browser.
+
+### What each element means
+
+| Element | Meaning |
+|---|---|
+| **Purple node** | `.onion` hidden service |
+| **Blue node** | Clearnet domain |
+| **Node size** | Pages crawled on that domain — bigger = more pages visited |
+| **Node label** | Domain name + page title below it |
+| **Green edge** | Cross-domain link (one domain links to another) |
+
+### Interactions
+
+| Action | Result |
+|---|---|
+| Scroll | Zoom in / out |
+| Drag background | Pan the canvas |
+| Click a node | Highlights all direct connections; opens a detail panel |
+| Bright green edges | Outgoing links from the selected domain |
+| Amber edges | Incoming links into the selected domain |
+| Drag a node | Pins it in place |
+| Search bar | Jumps to and selects a domain by name |
+| Click background or ✕ | Clears selection |
+
+> **Note:** The graph requires an internet connection to load D3.js from CDN (`d3js.org`). If you are in an air-gapped environment, download D3 v7 and replace the `<script src>` URL with a local path.
 
 ---
 

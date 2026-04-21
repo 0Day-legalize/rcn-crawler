@@ -28,6 +28,7 @@ const {
     MAX_CONCURRENT_REQUESTS,
     VISITED_SAVE_INTERVAL,
     CIRCUIT_ROTATE_EVERY,
+    IGNORE_ROBOTS,
 } = require("../config");
 const { sleep, jitteredSleep, Semaphore } = require("../utils/sleep");
 const { smartFetch }        = require("../http/smartFetch");
@@ -37,6 +38,7 @@ const { enqueueLinks }      = require("./enqueueLinks");
 const { saveResults }       = require("../output/saveResults");
 const { saveVisited }       = require("../output/saveVisited");
 const { saveQueue, clearQueue } = require("../output/saveQueue");
+const { generateGraph }     = require("../output/generateGraph");
 const { getRobots }         = require("../robots/getRobots");
 const { isAllowed }         = require("../robots/isAllowed");
 const { TOR_HOST }          = require("../config");
@@ -230,21 +232,27 @@ async function handleSuccess(ctx) {
     log.info(`Status: ${result.status} | Server: ${result.server ?? "—"} | X-Powered-By: ${result.poweredBy ?? "—"}`, { url: next });
 
     const { links, downloads, meta } = parsePage(result.html, next);
-    const robotsRules = await getRobots(baseHost, domainAgent);
 
     // Apply this domain's robots rules to same-domain links only.
     // Cross-domain links pass through — their own worker will check robots.
-    const allowedLinks = [...new Set(
-        links.filter((link) => {
-            try {
-                const linkHost = new URL(link).hostname.toLowerCase();
-                if (linkHost === baseHost) return isAllowed(link, robotsRules);
-                return true;
-            } catch {
-                return false;
-            }
-        })
-    )];
+    // Skipped entirely when IGNORE_ROBOTS is set.
+    let allowedLinks;
+    if (IGNORE_ROBOTS) {
+        allowedLinks = [...new Set(links)];
+    } else {
+        const robotsRules = await getRobots(baseHost, domainAgent);
+        allowedLinks = [...new Set(
+            links.filter((link) => {
+                try {
+                    const linkHost = new URL(link).hostname.toLowerCase();
+                    if (linkHost === baseHost) return isAllowed(link, robotsRules);
+                    return true;
+                } catch {
+                    return false;
+                }
+            })
+        )];
+    }
 
     log.info(`Links: ${links.length} found, ${allowedLinks.length} allowed, ${downloads.length} downloads${meta.title ? ` | "${meta.title}"` : ""}`, { url: next });
     logLinks(allowedLinks);
@@ -326,11 +334,12 @@ async function crawlDomain(baseHost, torPort, shared, isInterrupted) {
                 if (sharedVisited.has(next))   return;
                 if (isAtLimit(sharedCounters)) return;
 
-                const robotsRules = await getRobots(baseHost, domainAgent);
-
-                if (!isAllowed(next, robotsRules)) {
-                    await handleBlockedByRobots(next, baseHost, sharedCounters, sharedVisited, sharedResults);
-                    return;
+                if (!IGNORE_ROBOTS) {
+                    const robotsRules = await getRobots(baseHost, domainAgent);
+                    if (!isAllowed(next, robotsRules)) {
+                        await handleBlockedByRobots(next, baseHost, sharedCounters, sharedVisited, sharedResults);
+                        return;
+                    }
                 }
 
                 sharedVisited.add(next);
@@ -479,6 +488,7 @@ async function processQueue({ queue, torPort, preloadedVisited = new Set() }) {
         await closeBrowser();
         log.info(`Interrupted — state saved. Resume with the same command to continue.`);
         log.info(`Processed this session: ${sharedCounters.processed} | Total visited: ${sharedVisited.size} | Queue remaining: ${sharedQueue.length}`);
+        generateGraph();
         process.exit(0);
     }
 
@@ -486,6 +496,7 @@ async function processQueue({ queue, torPort, preloadedVisited = new Set() }) {
     saveVisited(sharedVisited);
     clearQueue();
     await closeBrowser();
+    generateGraph();
 
     if (MAX_PAGES > 0 && sharedCounters.processed >= MAX_PAGES) {
         log.info(`Reached MAX_PAGES limit (${MAX_PAGES})`);
