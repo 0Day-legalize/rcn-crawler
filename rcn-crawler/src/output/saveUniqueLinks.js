@@ -1,20 +1,23 @@
 /**
  * @file saveUniqueLinks.js
  * @description Merges and persists all unique navigable links and downloadable
- * file URLs discovered across crawl runs to unique-links.json.
+ * file URLs discovered across crawl runs to data/unique-links.json.
  * Previous run data is loaded and merged before each write so the file
  * accumulates links indefinitely without duplication.
  */
 
 const fs   = require("node:fs");
 const path = require("node:path");
+const { ensureDir } = require("../utils/compress");
+
+/** @type {string} Directory for all live data files. */
+const DATA_DIR = path.join(__dirname, "..", "..", "data");
 
 /** @type {string} Absolute path of the unique links persistence file. */
-const OUTPUT_PATH = path.join(__dirname, "..", "..", "unique-links.json");
+const OUTPUT_PATH = path.join(DATA_DIR, "unique-links.json");
 
 /**
  * URL schemes considered valid for storage.
- * Prevents non-http(s) entries from contaminating the output file.
  * @type {Set<string>}
  */
 const ALLOWED_SCHEMES = new Set(["http:", "https:"]);
@@ -24,7 +27,7 @@ const ALLOWED_SCHEMES = new Set(["http:", "https:"]);
 /**
  * Returns true if the value is a string containing a valid http(s) URL.
  *
- * @param {unknown} link - Value to validate
+ * @param {unknown} link
  * @returns {boolean}
  */
 function isSafeUrl(link) {
@@ -37,7 +40,7 @@ function isSafeUrl(link) {
 }
 
 /**
- * Reads unique-links.json and returns its domains and downloads objects.
+ * Reads data/unique-links.json and returns its domains and downloads objects.
  * Returns empty objects on any error or structural mismatch.
  *
  * @returns {{ domains: Record<string, string[]>, downloads: Record<string, string[]> }}
@@ -67,7 +70,7 @@ function loadExisting() {
  * Converts a plain object of string arrays into a map of Sets,
  * filtering each entry through isSafeUrl.
  *
- * @param {Record<string, unknown>} obj - Source plain object from JSON
+ * @param {Record<string, unknown>} obj
  * @returns {Record<string, Set<string>>}
  */
 function toSetMap(obj) {
@@ -80,12 +83,10 @@ function toSetMap(obj) {
 
 /**
  * Adds an array of URLs to a Set map under the specified key.
- * Creates the Set if the key is not yet present.
- * Only safe http(s) URLs are accepted.
  *
- * @param {Record<string, Set<string>>} map - Target Set map (mutated in place)
- * @param {string}                      key - Domain key (e.g. "http://example.com")
- * @param {string[]}                    urls - URLs to merge in
+ * @param {Record<string, Set<string>>} map
+ * @param {string}   key
+ * @param {string[]} urls
  * @returns {void}
  */
 function mergeInto(map, key, urls) {
@@ -99,8 +100,8 @@ function mergeInto(map, key, urls) {
  * Converts a Set map to a plain object of sorted string arrays,
  * omitting any keys whose Set is empty.
  *
- * @param {Record<string, Set<string>>} map - Source Set map
- * @returns {Record<string, string[]>}      - Serialisable plain object
+ * @param {Record<string, Set<string>>} map
+ * @returns {Record<string, string[]>}
  */
 function toSortedArrayMap(map) {
     const out = {};
@@ -113,21 +114,19 @@ function toSortedArrayMap(map) {
 /**
  * Counts the total number of entries across all arrays in a plain object.
  *
- * @param {Record<string, string[]>} obj - Object of string arrays
- * @returns {number}                     - Sum of all array lengths
+ * @param {Record<string, string[]>} obj
+ * @returns {number}
  */
 function countAll(obj) {
     return Object.values(obj).reduce((acc, arr) => acc + arr.length, 0);
 }
 
-// ── Merge helpers per data type ───────────────────────────────────────────
-
 /**
  * Merges navigable links from the current run into the existing links map.
  *
- * @param {Record<string, string[]>} existing - Links loaded from the previous run
- * @param {object[]}                 results  - Per-page result objects from processQueue
- * @returns {Record<string, string[]>}        - Merged, deduplicated, sorted output
+ * @param {Record<string, string[]>} existing
+ * @param {object[]} results
+ * @returns {Record<string, string[]>}
  */
 function mergeLinks(existing, results) {
     const map = toSetMap(existing);
@@ -141,9 +140,9 @@ function mergeLinks(existing, results) {
 /**
  * Merges download URLs from the current run into the existing downloads map.
  *
- * @param {Record<string, string[]>} existing - Downloads loaded from the previous run
- * @param {object[]}                 results  - Per-page result objects from processQueue
- * @returns {Record<string, string[]>}        - Merged, deduplicated, sorted output
+ * @param {Record<string, string[]>} existing
+ * @param {object[]} results
+ * @returns {Record<string, string[]>}
  */
 function mergeDownloads(existing, results) {
     const map = toSetMap(existing);
@@ -158,7 +157,7 @@ function mergeDownloads(existing, results) {
 
 /**
  * Merges this run's links and downloads with all previous runs and writes
- * the result to unique-links.json.
+ * the result to data/unique-links.json.
  *
  * Output shape:
  * ```json
@@ -169,10 +168,12 @@ function mergeDownloads(existing, results) {
  * }
  * ```
  *
- * @param {{ results: object[] }} result - Crawl result object from processQueue
- * @returns {string}                     - Absolute path of the written file
+ * @param {{ results: object[] }} result
+ * @returns {string} - Absolute path of the written file
  */
 function saveUniqueLinks(result) {
+    ensureDir(DATA_DIR);
+
     const existing  = loadExisting();
     const domains   = mergeLinks(existing.domains, result.results);
     const downloads = mergeDownloads(existing.downloads, result.results);
@@ -188,7 +189,9 @@ function saveUniqueLinks(result) {
         downloads,
     };
 
-    fs.writeFileSync(OUTPUT_PATH, JSON.stringify(final, null, 2), "utf-8");
+    const tmp = `${OUTPUT_PATH}.tmp`;
+    fs.writeFileSync(tmp, JSON.stringify(final, null, 2), "utf-8");
+    fs.renameSync(tmp, OUTPUT_PATH);
     return OUTPUT_PATH;
 }
 

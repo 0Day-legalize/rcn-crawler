@@ -1,20 +1,22 @@
 /**
  * @file loadVisited.js
- * @description Reads previously visited URLs from visited.json on startup,
+ * @description Reads previously visited URLs from data/visited.json on startup,
  * enabling the crawler to resume without re-crawling known pages.
  */
 
-const fs                  = require("node:fs");
-const { OUTPUT_PATH }     = require("./saveVisited");
+const fs              = require("node:fs");
+const { log }         = require("../utils/logger");
+const { OUTPUT_PATH } = require("./saveVisited");
 
 /**
- * Loads the visited URL set from visited.json.
+ * Loads the visited URL set from data/visited.json.
  *
  * Behaviour by state:
  * - File absent        → returns empty Set (first run)
  * - File unparseable   → logs a warning, returns empty Set
  * - Invalid structure  → logs a warning, returns empty Set
- * - Valid file         → filters out non-http(s) entries, logs dropped count, returns populated Set
+ * - Valid file         → filters out non-http(s) entries, logs dropped count,
+ *                        returns populated Set
  *
  * @returns {Set<string>} - Set of previously visited URLs safe to skip this run
  */
@@ -26,11 +28,10 @@ function loadVisited() {
         const parsed = JSON.parse(raw);
 
         if (!parsed || !Array.isArray(parsed.urls)) {
-            console.warn("[loadVisited] visited.json has unexpected structure — starting fresh");
+            log.warn("visited.json has unexpected structure — starting fresh");
             return new Set();
         }
 
-        // Only accept valid http(s) URLs — drops corrupt or injected entries
         const valid = parsed.urls.filter((entry) => {
             if (typeof entry !== "string") return false;
             try {
@@ -42,16 +43,16 @@ function loadVisited() {
         });
 
         if (valid.length !== parsed.urls.length) {
-            console.warn(
-                `[loadVisited] Dropped ${parsed.urls.length - valid.length} invalid entries from visited.json`
-            );
+            log.warn("Dropped invalid entries from visited.json", {
+                dropped: parsed.urls.length - valid.length,
+            });
         }
 
-        console.log(`Resuming — ${valid.length} URL(s) already visited from previous run(s)`);
+        log.info("Resuming from previous run", { previouslyVisited: valid.length });
         return new Set(valid);
 
     } catch {
-        console.warn("[loadVisited] Could not read visited.json — starting fresh");
+        log.warn("Could not read visited.json — starting fresh");
         return new Set();
     }
 }

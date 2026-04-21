@@ -23,8 +23,9 @@ Usage:
 Options:
     --max-pages=NUMBER              Max pages to crawl, 0 = unlimited (default: 0)
     --delay=MS                      Delay between requests (default: 1000)
-    --timeout=MS                    Request timeout (default: 8000)
+    --timeout=MS                    Request timeout (default: 20000)
     --debug=true|false              Show extracted links (default: true)
+    --onion-only=true|false         Skip all non-.onion URLs (default: false)
     --max-concurrent-domains=N      Domains crawled in parallel (default: 3)
     --max-concurrent-requests=N     Requests in parallel per domain (default: 2)
     --help                          Show this help message
@@ -66,6 +67,9 @@ function getArg(name, defaultValue) {
 /** @type {boolean} Print extracted links to the console when true. */
 const DEBUG_LINKS = getArg("debug", "true") === "true";
 
+/** @type {boolean} When true, non-.onion URLs discovered during crawling are dropped at enqueue time. */
+const ONION_ONLY = getArg("onion-only", "false") === "true";
+
 /**
  * Maximum number of pages to process before stopping.
  * Set to 0 for unlimited (default) — the crawl runs until no new links are found.
@@ -76,8 +80,12 @@ const MAX_PAGES = Number(getArg("max-pages", 0));
 /** @type {number} Milliseconds to wait between requests on the same domain. */
 const DELAY_MS = Number(getArg("delay", 1000));
 
-/** @type {number} Milliseconds before an individual HTTP request times out. */
-const TIMEOUT_MS = Number(getArg("timeout", 8000));
+/**
+ * Milliseconds before an individual HTTP request times out.
+ * Onion services can take 10-20 s to build a circuit on first connect.
+ * @type {number}
+ */
+const TIMEOUT_MS = Number(getArg("timeout", 20000));
 
 /** @type {number} How many domains are crawled concurrently. */
 const MAX_CONCURRENT_DOMAINS = Number(getArg("max-concurrent-domains", 3));
@@ -118,6 +126,14 @@ const MAX_LINKS_PER_PAGE = 500;
 const MAX_HREF_LENGTH = 2048;
 
 /**
+ * How many pages a single domain worker fetches before rotating to a fresh
+ * Tor circuit (via new SOCKS5 credential pair). Lower = stronger unlinkability;
+ * higher = fewer NEWNYM round-trips. 10 is a reasonable middle ground.
+ * @type {number}
+ */
+const CIRCUIT_ROTATE_EVERY = 10;
+
+/**
  * Number of pages crawled between batched writes to visited.json.
  * Lower values increase durability; higher values reduce disk I/O.
  * @type {number}
@@ -133,49 +149,67 @@ const VISITED_SAVE_INTERVAL = 10;
  * so Chromium profiles include Client Hints and Firefox/Safari profiles
  * intentionally omit them.
  *
- * Keep this list diverse but realistic — every profile here must correspond
- * to a real browser/OS combination that ships today.
+ * The `browser` field controls which Sec-Fetch-* headers are emitted:
+ *   - "chrome"  → Sec-CH-UA* + Sec-Fetch-* + Upgrade-Insecure-Requests
+ *   - "firefox" → Sec-Fetch-* + Upgrade-Insecure-Requests (no Sec-CH-UA)
+ *   - "safari"  → none of the above
  *
- * @type {Array<{ua: string, secChUa?: string, secChUaMobile?: string, secChUaPlatform?: string}>}
+ * Update versions quarterly — stale browser versions are a reliable crawler tell.
+ *
+ * @type {Array<{browser: string, ua: string, secChUa?: string, secChUaMobile?: string, secChUaPlatform?: string}>}
  */
 const USER_AGENT_PROFILES = [
-    // Chromium-family profiles (send Sec-CH-UA*)
+    // Chrome 140 - Windows
     {
-        ua: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        secChUa:         '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+        browser:         "chrome",
+        ua:              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        secChUa:         '"Chromium";v="140", "Google Chrome";v="140", "Not-A.Brand";v="8"',
         secChUaMobile:   "?0",
         secChUaPlatform: '"Windows"',
     },
+    // Chrome 141 - Windows
     {
-        ua: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-        secChUa:         '"Chromium";v="125", "Google Chrome";v="125", "Not.A/Brand";v="24"',
+        browser:         "chrome",
+        ua:              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36",
+        secChUa:         '"Chromium";v="141", "Google Chrome";v="141", "Not-A.Brand";v="24"',
         secChUaMobile:   "?0",
         secChUaPlatform: '"Windows"',
     },
+    // Chrome 140 - macOS
     {
-        ua: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        secChUa:         '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+        browser:         "chrome",
+        ua:              "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        secChUa:         '"Chromium";v="140", "Google Chrome";v="140", "Not-A.Brand";v="8"',
         secChUaMobile:   "?0",
         secChUaPlatform: '"macOS"',
     },
+    // Chrome 140 - Linux
     {
-        ua: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        secChUa:         '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+        browser:         "chrome",
+        ua:              "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+        secChUa:         '"Chromium";v="140", "Google Chrome";v="140", "Not-A.Brand";v="8"',
         secChUaMobile:   "?0",
         secChUaPlatform: '"Linux"',
     },
-    // Non-Chromium profiles (must NOT send Sec-CH-UA*)
+    // Safari 18.0 - macOS (no Sec-CH-UA, no Sec-Fetch-*)
     {
-        ua: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Safari/605.1.15",
+        browser: "safari",
+        ua:      "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_6_1) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15",
     },
+    // Firefox 133 - Linux
     {
-        ua: "Mozilla/5.0 (X11; Linux x86_64; rv:125.0) Gecko/20100101 Firefox/125.0",
+        browser: "firefox",
+        ua:      "Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0",
     },
+    // Firefox 134 - Windows
     {
-        ua: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0",
+        browser: "firefox",
+        ua:      "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:134.0) Gecko/20100101 Firefox/134.0",
     },
+    // Firefox 135 - Windows
     {
-        ua: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:124.0) Gecko/20100101 Firefox/124.0",
+        browser: "firefox",
+        ua:      "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:135.0) Gecko/20100101 Firefox/135.0",
     },
 ];
 
@@ -224,6 +258,7 @@ const TOR_PORTS = [9050, 9150];
 
 module.exports = {
     DEBUG_LINKS,
+    ONION_ONLY,
     MAX_PAGES,
     DELAY_MS,
     DELAY_JITTER,
@@ -235,6 +270,7 @@ module.exports = {
     MAX_LINKS_PER_PAGE,
     MAX_HREF_LENGTH,
     VISITED_SAVE_INTERVAL,
+    CIRCUIT_ROTATE_EVERY,
     USER_AGENT_PROFILES,
     ACCEPT_LANGUAGES,
     TOR_HOST,

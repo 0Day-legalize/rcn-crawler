@@ -1,15 +1,37 @@
 /**
  * @file saveResults.js
- * @description Persists the full crawl result to results.json after each page
- * and as a final write at the end of a run.
+ * @description Persists the full crawl result to data/results.json.
+ *
+ * On every write, the previous results.json is compressed into
+ * data/archive/results-<timestamp>.json.gz before being overwritten,
+ * preserving a full history of every crawl run.
+ * Only the most recent MAX_RESULTS_ARCHIVES snapshots are kept.
  */
 
 const fs   = require("node:fs");
 const path = require("node:path");
+const { ensureDir, compressFile, pruneArchive } = require("../utils/compress");
+
+/** @type {string} Directory for all live data files. */
+const DATA_DIR = path.join(__dirname, "..", "..", "data");
+
+/** @type {string} Directory for compressed snapshots of previous runs. */
+const ARCHIVE_DIR = path.join(DATA_DIR, "archive");
+
+/** @type {string} Absolute path of the live results file. */
+const OUTPUT_PATH = path.join(DATA_DIR, "results.json");
 
 /**
- * Serialises the current crawl state to results.json.
- * Overwrites the file on every call — the file always reflects the latest state.
+ * How many compressed results archives to retain in data/archive/.
+ * @type {number}
+ */
+const MAX_RESULTS_ARCHIVES = 10;
+
+/**
+ * Serialises the current crawl state to data/results.json.
+ *
+ * If a previous results.json exists it is archived to
+ * data/archive/results-<ISO>.json.gz before being overwritten.
  *
  * Output shape:
  * ```json
@@ -20,13 +42,25 @@ const path = require("node:path");
  * ```
  *
  * @param {{ processedCount: number, visitedCount: number, results: object[] }} result
- *   - processedCount: pages successfully fetched and parsed this run
- *   - visitedCount:   total URLs claimed (includes errors and robots blocks)
- *   - results:        array of per-page result objects built by processQueue
- * @returns {string} - Absolute path of the written file
+ * @returns {string} - Absolute path of the written live file
  */
 function saveResults(result) {
-    const outputPath = path.join(__dirname, "..", "..", "results.json");
+    ensureDir(DATA_DIR);
+    ensureDir(ARCHIVE_DIR);
+
+    if (fs.existsSync(OUTPUT_PATH)) {
+        const ts      = new Date().toISOString().replaceAll(/[:.]/g, "-");
+        const staging = path.join(DATA_DIR, `results-${ts}.json`);
+
+        try {
+            fs.renameSync(OUTPUT_PATH, staging);
+            compressFile(staging, ARCHIVE_DIR)
+                .then(() => pruneArchive(ARCHIVE_DIR, /^results-.*\.json\.gz$/, MAX_RESULTS_ARCHIVES))
+                .catch((err) => process.stderr.write(`[saveResults] Archive error: ${err.message}\n`));
+        } catch (err) {
+            process.stderr.write(`[saveResults] Failed to stage previous results: ${err.message}\n`);
+        }
+    }
 
     const output = {
         summary: {
@@ -37,8 +71,8 @@ function saveResults(result) {
         pages: result.results,
     };
 
-    fs.writeFileSync(outputPath, JSON.stringify(output, null, 2), "utf-8");
-    return outputPath;
+    fs.writeFileSync(OUTPUT_PATH, JSON.stringify(output, null, 2), "utf-8");
+    return OUTPUT_PATH;
 }
 
-module.exports = { saveResults };
+module.exports = { saveResults, OUTPUT_PATH };

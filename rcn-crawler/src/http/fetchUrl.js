@@ -13,7 +13,6 @@ const {
     USER_AGENT_PROFILES,
     ACCEPT_LANGUAGES,
 } = require("../config");
-const { isOnion }   = require("../utils/urls");
 const { isSafeUrl } = require("../utils/ipSafety");
 
 /** @type {number} Maximum redirect hops to follow before returning an error. */
@@ -58,6 +57,33 @@ function pickProfile() {
  */
 function pickAcceptLanguage() {
     return ACCEPT_LANGUAGES[Math.floor(Math.random() * ACCEPT_LANGUAGES.length)];
+}
+
+/**
+ * Computes the Sec-Fetch-Site value for a navigation request.
+ *
+ * Mirrors what browsers send by default:
+ *   - No referrer (direct/seed navigation) → "none"
+ *   - Same origin (scheme + host + port identical) → "same-origin"
+ *   - Different origin → "cross-site"
+ *
+ * (True "same-site" requires eTLD+1 comparison; "cross-site" is the safe
+ * default for the cross-origin case without a tldts dependency.)
+ *
+ * @param {string|undefined|null} referrer
+ * @param {string} target
+ * @returns {"none"|"same-origin"|"cross-site"}
+ */
+function computeSecFetchSite(referrer, target) {
+    if (!referrer) return "none";
+    try {
+        const src = new URL(referrer);
+        const dst = new URL(target);
+        if (src.origin === dst.origin) return "same-origin";
+        return "cross-site";
+    } catch {
+        return "none";
+    }
 }
 
 /**
@@ -132,6 +158,7 @@ function buildHeaders(target, referrer) {
         ["Accept-Language", pickAcceptLanguage()],
         // `br` (Brotli) is handled by decompressStream below.
         ["Accept-Encoding", "gzip, deflate, br"],
+        ["Connection",      "keep-alive"],
     ];
 
     // Client Hints: Chromium profiles carry them; Firefox/Safari profiles
@@ -141,6 +168,16 @@ function buildHeaders(target, referrer) {
         pairs.push(["Sec-CH-UA",          profile.secChUa]);
         pairs.push(["Sec-CH-UA-Mobile",   profile.secChUaMobile]);
         pairs.push(["Sec-CH-UA-Platform", profile.secChUaPlatform]);
+    }
+
+    // Sec-Fetch-* and Upgrade-Insecure-Requests: Chrome and Firefox both send
+    // these on every navigation; Safari does not. Gate on profile.browser.
+    if (profile.browser !== "safari") {
+        pairs.push(["Upgrade-Insecure-Requests", "1"]);
+        pairs.push(["Sec-Fetch-Site",             computeSecFetchSite(referrer, target)]);
+        pairs.push(["Sec-Fetch-Mode",             "navigate"]);
+        pairs.push(["Sec-Fetch-User",             "?1"]);
+        pairs.push(["Sec-Fetch-Dest",             "document"]);
     }
 
     const referer = buildReferer(referrer, target);
@@ -197,15 +234,16 @@ async function fetchUrl(url, torAgent, referrer) {
  * @returns {Promise<import("axios").AxiosResponse>}
  */
 async function makeRequest(url, torAgent, referrer) {
-    const useTor = isOnion(url);
+    // All traffic routes through Tor — both .onion and clearnet.
+    // Sending clearnet requests direct would expose the crawler's real IP.
     return axios.get(url, {
         timeout:        TIMEOUT_MS,
         responseType:   "stream",
         validateStatus: () => true,
         maxRedirects:   0,       // redirects are handled manually (SSRF check per hop)
         decompress:     false,   // decompression handled manually (gzip bomb protection)
-        httpAgent:      useTor ? torAgent : undefined,
-        httpsAgent:     useTor ? torAgent : undefined,
+        httpAgent:      torAgent,
+        httpsAgent:     torAgent,
         headers:        buildHeaders(url, referrer),
     });
 }

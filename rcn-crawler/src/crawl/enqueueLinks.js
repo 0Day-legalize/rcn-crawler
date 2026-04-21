@@ -2,8 +2,11 @@
  * @file enqueueLinks.js
  * @description Adds newly discovered links to the shared crawl queue,
  * skipping URLs that have already been visited or are already queued.
- * Accepts links from any domain — cross-domain discovery is intentional.
+ * When ONION_ONLY is set, non-.onion URLs are dropped before enqueue.
  */
+
+const { ONION_ONLY } = require("../config");
+const { isOnion }    = require("../utils/urls");
 
 /**
  * Filters and appends a list of links to the shared queue.
@@ -28,6 +31,8 @@
 function enqueueLinks(links, queue, visited, queued, referrer) {
     for (const link of links) {
         try {
+            if (ONION_ONLY && !isOnion(link)) continue;
+
             const parsed         = new URL(link);
             const normalizedHost = parsed.hostname.toLowerCase();
 
