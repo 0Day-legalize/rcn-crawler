@@ -30,6 +30,7 @@ const {
     CIRCUIT_ROTATE_EVERY,
     IGNORE_ROBOTS,
     ADAPTIVE_RATE,
+    AUTO_COMPRESS,
     SEARCH_TERMS,
     SEARCH_TERMS_ONLY,
 } = require("../config");
@@ -44,6 +45,7 @@ const { saveQueue, clearQueue } = require("../output/saveQueue");
 const { generateGraph }     = require("../output/generateGraph");
 const { notify }            = require("../utils/notify");
 const { savePageContent, hashContent } = require("../output/savePageContent");
+const { checkAndCompress }             = require("../utils/diskCheck");
 const { getRobots }         = require("../robots/getRobots");
 const { isAllowed }         = require("../robots/isAllowed");
 const { TOR_HOST }          = require("../config");
@@ -288,6 +290,7 @@ async function handleSuccess(ctx) {
     if (!isDuplicate) {
         sharedSeenHashes.add(contentHash);
         savePageContent(html);
+        if (AUTO_COMPRESS) checkAndCompress();
     } else {
         log.info(`Duplicate content (${contentHash}) — skipping page save`, { url: next });
     }

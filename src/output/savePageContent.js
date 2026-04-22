@@ -35,7 +35,8 @@ function savePageContent(html) {
     ensureDir();
     const hash     = hashContent(html);
     const filePath = path.join(PAGES_DIR, `${hash}.html`);
-    if (!fs.existsSync(filePath)) {
+    const alreadySaved = fs.existsSync(filePath) || fs.existsSync(filePath + ".gz");
+    if (!alreadySaved) {
         fs.writeFileSync(filePath, html, "utf-8");
     }
     return hash;

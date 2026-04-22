@@ -36,6 +36,7 @@ Options:
     --allow-domains=a.com,b.onion   Whitelist — drop all links not matching these domains
     --block-domains=a.com,b.onion   Blacklist — drop links matching these domains
     --notify-url=URL                POST a JSON summary to this URL when the crawl ends
+    --auto-compress=true|false      Gzip pages when disk hits 50% full, repeat each time (default: true)
     --help                          Show this help message
 
 Examples:
@@ -83,6 +84,9 @@ const IGNORE_ROBOTS = getArg("ignore-robots", "false") === "true";
 
 /** @type {boolean} When true, per-domain delay is adjusted based on observed response times. */
 const ADAPTIVE_RATE = getArg("adaptive-rate", "true") === "true";
+
+/** @type {boolean} When true, gzip-compress saved pages whenever disk usage hits 50%. */
+const AUTO_COMPRESS = getArg("auto-compress", "true") === "true";
 
 /**
  * Maximum number of pages to process before stopping.
@@ -343,4 +347,5 @@ module.exports = {
     ALLOW_DOMAINS,
     BLOCK_DOMAINS,
     NOTIFY_URL,
+    AUTO_COMPRESS,
 };
