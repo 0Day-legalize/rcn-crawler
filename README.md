@@ -35,7 +35,7 @@ Output → `data/results.json` · `data/visited.json` · `data/unique-links.json
 * 🔁 Indefinite crawling — runs until no new links are found
 * 🔀 Multi-domain crawling — follows cross-domain links automatically
 * ♻️ Full resume support — `Ctrl+C` saves visited URLs and the pending queue; next run continues exactly where it left off
-* 🤖 Two-layer fetching — axios first, Puppeteer fallback for JS-rendered pages
+* 🤖 Two-layer fetching — axios first, Puppeteer fallback for JS-rendered pages with auto crash recovery
 * 🕵️ Anti-fingerprinting — UA rotation with matching Client Hints, Sec-Fetch-\* headers, header-order shuffling, jittered delays
 * 🔄 Tor circuit rotation — fresh circuit every 10 requests per domain via SOCKS5 credential isolation
 * ⚡ Concurrent crawling — configurable parallel domains and requests
@@ -44,6 +44,10 @@ Output → `data/results.json` · `data/visited.json` · `data/unique-links.json
 * 🌲 Depth limiting — stop following links beyond N hops from seed
 * 🚫 Domain allowlist / blocklist — whitelist or blacklist domains at enqueue time
 * 🔔 Finish notifications — POST a summary to Discord, Slack, Telegram, or any webhook on exit
+* 💾 Content storage — raw HTML saved to `data/pages/<hash>.html` for every unique page
+* 🔁 Content deduplication — body hash prevents storing the same page twice across all runs
+* 📈 Exit summary — `✓ ok  ✗ failed  ⊘ blocked  📄 unique pages` printed on every exit
+* 📦 Offline graph — D3.js downloaded once and embedded inline; graph works without internet after first run
 * 🤖 robots.txt support with 30-minute cache expiry
 * 🛡️ SSRF protection — blocks private/internal IP ranges and IPv4-mapped IPv6 across all redirect hops
 * 💣 Gzip bomb protection — dual compressed + decompressed size caps
@@ -60,12 +64,13 @@ main.js
         ├── crawlDomain (worker per domain)
         │     ├── smartFetch
         │     │     ├── fetchUrl (axios + retries) → Tor SOCKS5 → Internet / Onion
-        │     │     └── fetchWithPuppeteer (fallback, JS-rendered, isolated context)
+        │     │     └── fetchWithPuppeteer (fallback, JS-rendered, isolated context, crash recovery)
         │     ├── parseLinks → enqueueLinks (depth, allowlist, blocklist, onion-only)
+        │     ├── savePageContent (HTML → data/pages/<hash>.html, deduplication)
         │     └── getRobots → isAllowed
-        ├── generateGraph (auto on exit → data/graph.html)
+        ├── generateGraph (auto on exit → data/graph.html, D3 bundled inline)
         ├── notify (webhook POST on exit)
-        └── shared state (queue, visited, results, counters)
+        └── shared state (queue, visited, results, seenHashes, counters)
 ```
 
 * Every domain gets its own Tor circuit via unique SOCKS5 credentials (`IsolateSOCKSAuth`)
@@ -73,6 +78,7 @@ main.js
 * Dispatcher watches the shared queue and spawns workers for new domains as they appear
 * `visited.json` and `queue.json` are written together every 10 pages
 * Each Puppeteer fetch runs in an isolated browser context — no shared cookies or storage between sites
+* Content is deduplicated by SHA-256 body hash across the entire crawl
 
 ---
 
@@ -250,6 +256,7 @@ Puppeteer launches a headless Chromium browser:
 * Routed through the same Tor SOCKS5 proxy
 * Hardened with `puppeteer-extra-plugin-stealth` (removes `navigator.webdriver`, runtime leaks, etc.)
 * Each fetch runs in an isolated browser context — no cookies or storage shared between sites
+* Auto crash recovery — if Chromium crashes mid-crawl the browser is relaunched and the URL retried once
 * Uses a matching Chrome UA and Client Hint headers
 * Waits for `DOMContentLoaded` + 2 s for JS execution before capturing HTML
 
@@ -295,7 +302,7 @@ The graph is written to `data/graph.html` as a self-contained file — open it i
 
 Clicking a node opens a panel showing pages crawled, successful fetches, in/out link counts, and the number of downloadable files found. If downloads exist, a toggle expands a scrollable list of every download URL as a clickable link.
 
-> **Note:** The graph requires an internet connection to load D3.js from CDN (`d3js.org`). If you are in an air-gapped environment, download D3 v7 and replace the `<script src>` URL with a local path.
+> **Offline support:** On first run, D3.js is downloaded from CDN and cached to `data/d3.min.js`. All subsequent graph generations embed it inline — the graph works fully offline after the first generation.
 
 ---
 
@@ -342,7 +349,8 @@ rcn-crawler/
 │   │   ├── puppeteerFetch.js     # Puppeteer fallback — isolated context, JS rendering via Tor
 │   │   └── smartFetch.js         # axios-first, Puppeteer-fallback coordinator
 │   ├── output/
-│   │   ├── generateGraph.js      # D3.js force-directed domain graph → data/graph.html
+│   │   ├── generateGraph.js      # D3.js force-directed graph → data/graph.html (D3 bundled inline)
+│   │   ├── savePageContent.js    # writes data/pages/<hash>.html, content deduplication
 │   │   ├── saveResults.js        # writes data/results.json
 │   │   ├── saveUniqueLinks.js    # merges discovered links across runs
 │   │   ├── saveVisited.js        # atomic write of data/visited.json
@@ -367,11 +375,13 @@ rcn-crawler/
 │   ├── config.js                 # CLI flags + all runtime constants
 │   └── main.js
 ├── data/
-│   ├── results.json              # per-page crawl results (includes matchedTerms, downloads)
+│   ├── results.json              # per-page crawl results (includes matchedTerms, contentHash, downloads)
 │   ├── graph.html                # interactive domain connection map (auto-generated on exit)
+│   ├── d3.min.js                 # D3.js cached locally after first graph generation
 │   ├── unique-links.json         # all discovered links, merged across runs
 │   ├── visited.json              # visited URL set (enables resume)
 │   ├── queue.json                # pending URL queue (enables resume)
+│   ├── pages/                    # raw HTML per unique page, named by content hash
 │   └── archive/                  # compressed snapshots of previous results
 ├── logs/
 │   └── crawler-YYYY-MM-DD.log   # structured JSON-Lines logs (daily rotation)
@@ -389,6 +399,8 @@ rcn-crawler/
 * Adaptive rate limiting adjusts the delay automatically; set `--adaptive-rate=false` to use a fixed delay
 * Some sites rate-limit or block Tor exit nodes — errors are logged and the crawl continues
 * `unique-links.json` accumulates links across multiple runs — delete it to reset
+* `data/pages/` accumulates HTML files across runs — delete it to free disk space
+* `data/d3.min.js` is cached after the first graph generation — delete it to re-download
 * Puppeteer uses a system or bundled Chromium (~300 MB downloaded on first `npm install`)
 
 ---
@@ -403,6 +415,11 @@ rcn-crawler/
 ✅ Finish notifications (--notify-url — Discord / Slack / Telegram / custom)
 ✅ Auto-generated connection graph on exit
 ✅ Downloadable content listing in graph detail panel
+✅ Content storage — raw HTML saved to data/pages/<hash>.html
+✅ Content deduplication — body hash, no duplicate pages stored
+✅ Puppeteer crash recovery — auto-relaunch and retry on browser crash
+✅ Exit summary — ✓ ok  ✗ failed  ⊘ blocked  📄 unique pages
+✅ Offline graph — D3.js bundled inline after first download
 🔲 Docker support (containerized crawler runtime)
 🔲 Kata Containers integration (secure, isolated execution)
 🔲 Crawl metrics dashboard
