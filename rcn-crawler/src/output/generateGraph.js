@@ -62,6 +62,7 @@ function ensureNode(domain) {
             successPages: 0,
             isOnion:      domain.endsWith(".onion"),
             title:        null,
+            downloads:    [],   // deduplicated download URLs found on this domain
         });
     }
     return nodeMap.get(domain);
@@ -74,6 +75,11 @@ for (const page of pages) {
     node.pages++;
     if (page.success) node.successPages++;
     if (!node.title && page.meta?.title) node.title = page.meta.title;
+
+    // Collect download URLs, deduplicating across pages of the same domain
+    for (const dl of (page.downloads ?? [])) {
+        if (!node.downloads.includes(dl)) node.downloads.push(dl);
+    }
 
     for (const link of (page.links ?? [])) {
         try {
@@ -163,9 +169,9 @@ const html = `<!DOCTYPE html>
     #legend .item { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #8b949e; margin: 5px 0; }
     #legend .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 
-    #detail { top: 20px; right: 20px; min-width: 230px; display: none; }
+    #detail { top: 20px; right: 20px; min-width: 260px; max-width: 320px; display: none; }
     #detail-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
-    #detail h2 { font-size: 12px; font-weight: 600; color: #e6edf3; word-break: break-all; max-width: 190px; }
+    #detail h2 { font-size: 12px; font-weight: 600; color: #e6edf3; word-break: break-all; max-width: 210px; }
     #detail-close { cursor: pointer; color: #8b949e; font-size: 16px; line-height: 1; flex-shrink: 0; }
     #detail-close:hover { color: #e6edf3; }
     #detail .row { font-size: 12px; color: #8b949e; line-height: 2; display: flex; justify-content: space-between; gap: 16px; }
@@ -180,6 +186,27 @@ const html = `<!DOCTYPE html>
     }
     .badge-onion  { background: rgba(168,85,247,0.2); color: #a855f7; border: 1px solid #a855f760; }
     .badge-clear  { background: rgba(59,130,246,0.2);  color: #3b82f6; border: 1px solid #3b82f660; }
+
+    #dl-toggle {
+      display: flex; align-items: center; gap: 6px;
+      margin-top: 10px; cursor: pointer;
+      font-size: 11px; color: #f59e0b; user-select: none;
+    }
+    #dl-toggle:hover { color: #fbbf24; }
+    #dl-toggle .arrow { transition: transform 0.2s; display: inline-block; }
+    #dl-toggle.open .arrow { transform: rotate(90deg); }
+    #dl-list {
+      display: none; margin-top: 6px;
+      max-height: 180px; overflow-y: auto;
+      border: 1px solid #21262d; border-radius: 6px;
+      padding: 6px 8px;
+    }
+    #dl-list a {
+      display: block; font-size: 10px; color: #8b949e;
+      word-break: break-all; line-height: 1.6;
+      text-decoration: none;
+    }
+    #dl-list a:hover { color: #e6edf3; }
 
     #hint {
       position: fixed;
@@ -261,7 +288,12 @@ const html = `<!DOCTYPE html>
     <div class="row">Successful    <span id="d-success"></span></div>
     <div class="row">Links out     <span id="d-out"></span></div>
     <div class="row">Links in      <span id="d-in"></span></div>
+    <div class="row">Downloads     <span id="d-downloads"></span></div>
   </div>
+  <div id="dl-toggle" style="display:none">
+    <span class="arrow">▶</span> Show downloads
+  </div>
+  <div id="dl-list"></div>
 </div>
 
 <div id="search-wrap">
@@ -432,10 +464,45 @@ node.on("click", (e, d) => {
   document.getElementById("detail-badge").innerHTML     = d.isOnion
     ? '<span class="badge badge-onion">.onion hidden service</span>'
     : '<span class="badge badge-clear">Clearnet</span>';
-  document.getElementById("d-pages").textContent   = d.pages;
-  document.getElementById("d-success").textContent = d.successPages;
-  document.getElementById("d-out").textContent     = outDegree.get(d.id) || 0;
-  document.getElementById("d-in").textContent      = inDegree.get(d.id)  || 0;
+  document.getElementById("d-pages").textContent     = d.pages;
+  document.getElementById("d-success").textContent   = d.successPages;
+  document.getElementById("d-out").textContent       = outDegree.get(d.id) || 0;
+  document.getElementById("d-in").textContent        = inDegree.get(d.id)  || 0;
+  document.getElementById("d-downloads").textContent = (d.downloads ?? []).length;
+
+  // Downloads toggle
+  const dlToggle = document.getElementById("dl-toggle");
+  const dlList   = document.getElementById("dl-list");
+  dlToggle.classList.remove("open");
+  dlList.style.display = "none";
+  dlList.innerHTML = "";
+
+  const dls = d.downloads ?? [];
+  if (dls.length > 0) {
+    dlToggle.style.display = "flex";
+    dlToggle.childNodes[1].textContent = \` Show downloads (\${dls.length})\`;
+    for (const url of dls) {
+      const a = document.createElement("a");
+      a.href = url;
+      a.textContent = url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      dlList.appendChild(a);
+    }
+  } else {
+    dlToggle.style.display = "none";
+  }
+});
+
+document.getElementById("dl-toggle").addEventListener("click", function () {
+  const dlList = document.getElementById("dl-list");
+  const open   = dlList.style.display === "block";
+  dlList.style.display            = open ? "none" : "block";
+  this.classList.toggle("open",   !open);
+  this.querySelector(".arrow").textContent = open ? "▶" : "▼";
+  this.childNodes[1].textContent  = open
+    ? \` Show downloads (\${document.querySelectorAll("#dl-list a").length})\`
+    : \` Hide downloads (\${document.querySelectorAll("#dl-list a").length})\`;
 });
 
 function clearSelection() {
@@ -445,6 +512,8 @@ function clearSelection() {
       .attr("stroke", "#15803d")
       .attr("marker-end", "url(#arrow-default)");
   document.getElementById("detail").style.display = "none";
+  document.getElementById("dl-list").style.display = "none";
+  document.getElementById("dl-toggle").classList.remove("open");
 }
 
 svg.on("click", clearSelection);

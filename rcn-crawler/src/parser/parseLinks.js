@@ -32,7 +32,7 @@ const DOWNLOAD_EXTENSIONS = new Set([
     // Disk images
     "iso", "img",
     // Misc
-    "torrent", "magnet", "onion",
+    "torrent", "magnet",
 ]);
 
 /**

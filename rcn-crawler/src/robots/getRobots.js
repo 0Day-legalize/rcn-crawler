@@ -7,6 +7,7 @@
 const axios = require("axios");
 const { MAX_ROBOTS_SIZE } = require("../config");
 const { buildHeaders }    = require("../http/fetchUrl");
+const { log }             = require("../utils/logger");
 
 /** @type {number} Cache TTL in milliseconds (30 minutes). */
 const CACHE_TTL_MS = 30 * 60 * 1000;
@@ -61,7 +62,7 @@ async function getRobots(baseHost, torAgent) {
         const text = await readStream(response.data, MAX_ROBOTS_SIZE);
 
         if (text === null) {
-            console.warn(`[robots] ${baseHost} robots.txt exceeded size limit — treating as empty`);
+            log.warn(`[robots] ${baseHost} robots.txt exceeded size limit — treating as empty`);
             setCache(baseHost, []);
             return [];
         }

@@ -64,6 +64,12 @@ function isPrivateIPv6(ip) {
     if (normalized === "::1" || normalized === "0:0:0:0:0:0:0:1") return true; // loopback
     if (/^f[cd]/i.test(normalized)) return true;  // fc00::/7 unique local
     if (/^fe[89ab]/i.test(normalized)) return true; // fe80::/10 link-local
+
+    // IPv4-mapped IPv6 (e.g. ::ffff:127.0.0.1 or ::ffff:7f00:1) — extract and
+    // check the embedded IPv4 address against the private ranges.
+    const v4mapped = normalized.match(/^::ffff:(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/);
+    if (v4mapped) return isPrivateIPv4(v4mapped[1]);
+
     return false;
 }
 

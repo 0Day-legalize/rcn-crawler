@@ -29,6 +29,9 @@ const {
     VISITED_SAVE_INTERVAL,
     CIRCUIT_ROTATE_EVERY,
     IGNORE_ROBOTS,
+    ADAPTIVE_RATE,
+    SEARCH_TERMS,
+    SEARCH_TERMS_ONLY,
 } = require("../config");
 const { sleep, jitteredSleep, Semaphore } = require("../utils/sleep");
 const { smartFetch }        = require("../http/smartFetch");
@@ -39,10 +42,52 @@ const { saveResults }       = require("../output/saveResults");
 const { saveVisited }       = require("../output/saveVisited");
 const { saveQueue, clearQueue } = require("../output/saveQueue");
 const { generateGraph }     = require("../output/generateGraph");
+const { notify }            = require("../utils/notify");
 const { getRobots }         = require("../robots/getRobots");
 const { isAllowed }         = require("../robots/isAllowed");
 const { TOR_HOST }          = require("../config");
 const { log }               = require("../utils/logger");
+
+// ─────────────────────────────────────────────
+// Adaptive rate limiting
+// ─────────────────────────────────────────────
+
+/** Per-domain EWMA of response times (ms). */
+const domainTiming = new Map();
+const EWMA_ALPHA   = 0.3;
+const MIN_DELAY    = 500;
+const MAX_DELAY    = 10000;
+
+function recordResponseTime(domain, ms) {
+    const prev = domainTiming.get(domain) ?? { ewma: DELAY_MS, samples: 0 };
+    prev.ewma    = EWMA_ALPHA * ms + (1 - EWMA_ALPHA) * prev.ewma;
+    prev.samples++;
+    domainTiming.set(domain, prev);
+}
+
+function adaptiveDelay(domain) {
+    if (!ADAPTIVE_RATE) return DELAY_MS;
+    const t = domainTiming.get(domain);
+    if (!t || t.samples < 3) return DELAY_MS;
+    return Math.max(MIN_DELAY, Math.min(MAX_DELAY, Math.round(t.ewma * 0.5)));
+}
+
+// ─────────────────────────────────────────────
+// Search-term matching
+// ─────────────────────────────────────────────
+
+/**
+ * Returns the list of search terms found in the page HTML, or an empty array.
+ * When SEARCH_TERMS is empty every page is considered a match.
+ *
+ * @param {string} html
+ * @returns {string[]}
+ */
+function matchedTerms(html) {
+    if (SEARCH_TERMS.length === 0) return [];
+    const lower = html.toLowerCase();
+    return SEARCH_TERMS.filter(t => lower.includes(t));
+}
 
 // ─────────────────────────────────────────────
 // Tor circuit helpers
@@ -136,13 +181,14 @@ function buildBlockedResult(next, baseHost) {
  * @param {import("./parseLinks").PageMeta} meta - Extracted page metadata
  * @returns {object}
  */
-function buildSuccessResult(next, baseHost, result, links, enqueuedLinks, downloads, meta) {
+function buildSuccessResult(next, baseHost, result, links, enqueuedLinks, downloads, meta, terms) {
     return {
         url: next, baseHost, success: true,
         status:           result.status,
         server:           result.server,
         poweredBy:        result.poweredBy,
         meta,
+        matchedTerms:     terms,
         linksFoundRaw:    links.length,
         linksFoundUnique: enqueuedLinks.length,
         links:            enqueuedLinks,
@@ -224,7 +270,7 @@ async function handleFetchError(next, baseHost, error, sharedCounters, sharedVis
  */
 async function handleSuccess(ctx) {
     const {
-        next, baseHost, result,
+        next, baseHost, result, depth,
         sharedQueue, sharedVisited, sharedQueued,
         sharedCounters, sharedResults, domainAgent,
     } = ctx;
@@ -232,6 +278,11 @@ async function handleSuccess(ctx) {
     log.info(`Status: ${result.status} | Server: ${result.server ?? "—"} | X-Powered-By: ${result.poweredBy ?? "—"}`, { url: next });
 
     const { links, downloads, meta } = parsePage(result.html, next);
+
+    // Search-term matching — tag page and optionally restrict link following
+    const terms        = matchedTerms(result.html ?? "");
+    const termHit      = SEARCH_TERMS.length === 0 || terms.length > 0;
+    if (terms.length > 0) log.info(`Search terms matched: ${terms.join(", ")}`, { url: next });
 
     // Apply this domain's robots rules to same-domain links only.
     // Cross-domain links pass through — their own worker will check robots.
@@ -257,14 +308,14 @@ async function handleSuccess(ctx) {
     log.info(`Links: ${links.length} found, ${allowedLinks.length} allowed, ${downloads.length} downloads${meta.title ? ` | "${meta.title}"` : ""}`, { url: next });
     logLinks(allowedLinks);
 
-    // Tag each newly discovered link with the page it was found on. The
-    // worker reads this back off the queue item and emits a realistic
-    // Referer header on the next request (see handleSuccess -> fetchUrl).
-    enqueueLinks(allowedLinks, sharedQueue, sharedVisited, sharedQueued, next);
+    // Only enqueue outbound links when search-terms-only is off or page matched
+    if (termHit || !SEARCH_TERMS_ONLY) {
+        enqueueLinks(allowedLinks, sharedQueue, sharedVisited, sharedQueued, next, depth);
+    }
 
-    sharedResults.push(buildSuccessResult(next, baseHost, result, links, allowedLinks, downloads, meta));
+    sharedResults.push(buildSuccessResult(next, baseHost, result, links, allowedLinks, downloads, meta, terms));
     saveProgress(sharedCounters.processed, sharedVisited.size, sharedResults);
-    await jitteredSleep(DELAY_MS, DELAY_JITTER);
+    await jitteredSleep(adaptiveDelay(baseHost), DELAY_JITTER);
 }
 
 // ─────────────────────────────────────────────
@@ -328,7 +379,7 @@ async function crawlDomain(baseHost, torPort, shared, isInterrupted) {
 
         if (batch.length === 0) break;
 
-        await Promise.all(batch.map(async ({ url: next, referrer }) => {
+        await Promise.all(batch.map(async ({ url: next, referrer, depth = 0 }) => {
             await sem.acquire();
             try {
                 if (sharedVisited.has(next))   return;
@@ -360,11 +411,10 @@ async function crawlDomain(baseHost, torPort, shared, isInterrupted) {
                 }
                 requestsSinceRotate++;
 
-                log.info(`[${baseHost}] Processing: ${next}`);
-                // `referrer` is the URL of the page that linked to `next`, set by
-                // enqueueLinks when the link was discovered. fetchUrl uses it to
-                // build a strict-origin-when-cross-origin Referer header.
+                log.info(`[${baseHost}] Processing (depth ${depth}): ${next}`);
+                const t0     = Date.now();
                 const result = await smartFetch(next, domainAgent, referrer, torPort);
+                recordResponseTime(baseHost, Date.now() - t0);
 
                 if (result.error) {
                     await handleFetchError(next, baseHost, result.error, sharedCounters, sharedVisited, sharedResults);
@@ -374,7 +424,7 @@ async function crawlDomain(baseHost, torPort, shared, isInterrupted) {
                 sharedCounters.processed++;
 
                 await handleSuccess({
-                    next, baseHost, result,
+                    next, baseHost, result, depth,
                     sharedQueue, sharedVisited, sharedQueued,
                     sharedCounters, sharedResults, domainAgent,
                 });
@@ -432,6 +482,7 @@ async function processQueue({ queue, torPort, preloadedVisited = new Set() }) {
     const activeWorkers  = new Set();
     const domainSem      = new Semaphore(MAX_CONCURRENT_DOMAINS);
     const workerPromises = [];
+    const startedAt      = Date.now();
 
     // ── Interrupt handling ────────────────────────────────────────────────
     // When Ctrl-C is pressed, stop accepting new work and flush state to disk
@@ -483,12 +534,20 @@ async function processQueue({ queue, torPort, preloadedVisited = new Set() }) {
 
     await Promise.all(workerPromises);
 
+    const notifyStats = {
+        processedCount: sharedCounters.processed,
+        visitedCount:   sharedVisited.size,
+        domains:        new Set(sharedResults.map(r => r.baseHost).filter(Boolean)).size,
+        startedAt,
+    };
+
     if (interrupted) {
         flushState();
         await closeBrowser();
         log.info(`Interrupted — state saved. Resume with the same command to continue.`);
         log.info(`Processed this session: ${sharedCounters.processed} | Total visited: ${sharedVisited.size} | Queue remaining: ${sharedQueue.length}`);
         generateGraph();
+        await notify(notifyStats);
         process.exit(0);
     }
 
@@ -497,6 +556,7 @@ async function processQueue({ queue, torPort, preloadedVisited = new Set() }) {
     clearQueue();
     await closeBrowser();
     generateGraph();
+    await notify(notifyStats);
 
     if (MAX_PAGES > 0 && sharedCounters.processed >= MAX_PAGES) {
         log.info(`Reached MAX_PAGES limit (${MAX_PAGES})`);

@@ -112,10 +112,14 @@ function pickAcceptLanguage() {
  * @returns {Promise<{url: string, status?: number, server?: string|null, poweredBy?: string|null, html?: string, error?: string}>}
  */
 async function fetchWithPuppeteer(url, torPort, referrer) {
+    let context;
     let page;
     try {
         const b       = await getBrowser(torPort);
-        page          = await b.newPage();
+        // Isolated context — no shared cookies, storage, or service workers
+        // between crawled domains.
+        context       = await b.createBrowserContext();
+        page          = await context.newPage();
         const profile = pickChromeProfile();
 
         await page.setViewport({ width: 1280, height: 800 });
@@ -175,7 +179,7 @@ async function fetchWithPuppeteer(url, torPort, referrer) {
     } catch (error) {
         return { url, error: `[puppeteer] ${error.message}` };
     } finally {
-        if (page) await page.close().catch(() => {});
+        if (context) await context.close().catch(() => {});
     }
 }
 

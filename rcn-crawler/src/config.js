@@ -22,13 +22,20 @@ Usage:
 
 Options:
     --max-pages=NUMBER              Max pages to crawl, 0 = unlimited (default: 0)
-    --delay=MS                      Delay between requests (default: 1000)
+    --max-depth=N                   Max hop depth from seed URLs, 0 = unlimited (default: 0)
+    --delay=MS                      Base delay between requests (default: 1000)
     --timeout=MS                    Request timeout (default: 20000)
     --debug=true|false              Show extracted links (default: true)
     --onion-only=true|false         Skip all non-.onion URLs (default: false)
     --ignore-robots=true|false      Ignore robots.txt rules entirely (default: false)
+    --adaptive-rate=true|false      Auto-adjust delay per domain based on response times (default: true)
     --max-concurrent-domains=N      Domains crawled in parallel (default: 3)
     --max-concurrent-requests=N     Requests in parallel per domain (default: 2)
+    --search-terms=a,b,c            Only tag (or restrict) pages containing these keywords
+    --search-terms-only=true|false  Only follow links from pages matching search terms (default: false)
+    --allow-domains=a.com,b.onion   Whitelist — drop all links not matching these domains
+    --block-domains=a.com,b.onion   Blacklist — drop links matching these domains
+    --notify-url=URL                POST a JSON summary to this URL when the crawl ends
     --help                          Show this help message
 
 Examples:
@@ -74,6 +81,9 @@ const ONION_ONLY = getArg("onion-only", "false") === "true";
 /** @type {boolean} When true, robots.txt rules are not fetched or enforced. */
 const IGNORE_ROBOTS = getArg("ignore-robots", "false") === "true";
 
+/** @type {boolean} When true, per-domain delay is adjusted based on observed response times. */
+const ADAPTIVE_RATE = getArg("adaptive-rate", "true") === "true";
+
 /**
  * Maximum number of pages to process before stopping.
  * Set to 0 for unlimited (default) — the crawl runs until no new links are found.
@@ -81,8 +91,54 @@ const IGNORE_ROBOTS = getArg("ignore-robots", "false") === "true";
  */
 const MAX_PAGES = Number(getArg("max-pages", 0));
 
+/**
+ * Maximum hop depth from seed URLs. Links discovered at depth N are enqueued
+ * at depth N+1 and dropped if N+1 > MAX_DEPTH. 0 = unlimited.
+ * @type {number}
+ */
+const MAX_DEPTH = Number(getArg("max-depth", 0));
+
 /** @type {number} Milliseconds to wait between requests on the same domain. */
 const DELAY_MS = Number(getArg("delay", 1000));
+
+/**
+ * Keywords to match against page content (lowercased).
+ * Empty array = no filter (all pages pass).
+ * @type {string[]}
+ */
+const SEARCH_TERMS = getArg("search-terms", "")
+    .split(",").map(t => t.trim().toLowerCase()).filter(Boolean);
+
+/**
+ * When true and SEARCH_TERMS is set, links are only followed from pages
+ * that contain at least one search term. Non-matching pages are still
+ * recorded but their outbound links are discarded.
+ * @type {boolean}
+ */
+const SEARCH_TERMS_ONLY = getArg("search-terms-only", "false") === "true";
+
+/**
+ * Domain allowlist (whitelist). When non-empty, only URLs whose hostname
+ * matches or is a subdomain of an entry are enqueued.
+ * @type {string[]}
+ */
+const ALLOW_DOMAINS = getArg("allow-domains", "")
+    .split(",").map(t => t.trim().toLowerCase()).filter(Boolean);
+
+/**
+ * Domain blocklist. URLs whose hostname matches or is a subdomain of an
+ * entry are dropped at enqueue time.
+ * @type {string[]}
+ */
+const BLOCK_DOMAINS = getArg("block-domains", "")
+    .split(",").map(t => t.trim().toLowerCase()).filter(Boolean);
+
+/**
+ * Webhook URL to POST a JSON summary to when the crawl finishes.
+ * Empty string = disabled.
+ * @type {string}
+ */
+const NOTIFY_URL = getArg("notify-url", "");
 
 /**
  * Milliseconds before an individual HTTP request times out.
@@ -264,7 +320,9 @@ module.exports = {
     DEBUG_LINKS,
     ONION_ONLY,
     IGNORE_ROBOTS,
+    ADAPTIVE_RATE,
     MAX_PAGES,
+    MAX_DEPTH,
     DELAY_MS,
     DELAY_JITTER,
     TIMEOUT_MS,
@@ -280,4 +338,9 @@ module.exports = {
     ACCEPT_LANGUAGES,
     TOR_HOST,
     TOR_PORTS,
+    SEARCH_TERMS,
+    SEARCH_TERMS_ONLY,
+    ALLOW_DOMAINS,
+    BLOCK_DOMAINS,
+    NOTIFY_URL,
 };
