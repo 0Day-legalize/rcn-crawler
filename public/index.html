@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RCN Search</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0d1117;
+      color: #e6edf3;
+      font-family: 'Segoe UI', system-ui, monospace;
+      min-height: 100vh;
+      padding: 40px 24px;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: #e6edf3;
+    }
+    .subtitle { font-size: 12px; color: #4b5563; margin-bottom: 32px; }
+
+    .card {
+      background: rgba(22, 27, 34, 0.8);
+      border: 1px solid #21262d;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+
+    label { font-size: 12px; color: #8b949e; display: block; margin-bottom: 6px; }
+
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      background: #0d1117;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: #e6edf3;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s;
+      margin-bottom: 16px;
+    }
+    input:focus { border-color: #58a6ff; }
+    input::placeholder { color: #4b5563; }
+
+    .row { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
+    .row > * { flex: 1; min-width: 180px; }
+
+    /* Toggle */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .toggle-label { font-size: 12px; color: #8b949e; }
+
+    .toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      inset: 0;
+      background: #21262d;
+      border-radius: 24px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .slider::before {
+      content: "";
+      position: absolute;
+      width: 18px; height: 18px;
+      left: 3px; top: 3px;
+      background: #8b949e;
+      border-radius: 50%;
+      transition: transform 0.2s, background 0.2s;
+    }
+    .toggle input:checked + .slider { background: rgba(168,85,247,0.3); }
+    .toggle input:checked + .slider::before { transform: translateX(20px); background: #a855f7; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: background 0.15s, opacity 0.15s;
+    }
+    .btn-primary { background: #238636; color: #fff; }
+    .btn-primary:hover { background: #2ea043; }
+    .btn-danger  { background: #da3633; color: #fff; }
+    .btn-danger:hover  { background: #f85149; }
+    .btn:disabled { opacity: 0.4; cursor: default; }
+
+    /* Status bar */
+    #status-bar {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      color: #8b949e;
+      margin-top: 16px;
+    }
+    #status-bar.visible { display: flex; }
+    .dot-live {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #22c55e;
+      animation: pulse 1.2s infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .dot-idle { width: 8px; height: 8px; border-radius: 50%; background: #4b5563; }
+
+    /* Log */
+    #log {
+      background: #010409;
+      border: 1px solid #21262d;
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 11px;
+      line-height: 1.7;
+      color: #4b5563;
+      height: 220px;
+      overflow-y: auto;
+      font-family: monospace;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .log-info  { color: #58a6ff; }
+    .log-warn  { color: #f59e0b; }
+    .log-ok    { color: #3fb950; }
+    .log-err   { color: #f85149; }
+    .log-sys   { color: #4b5563; }
+
+    /* Results */
+    #results-count { font-size: 12px; color: #8b949e; margin-bottom: 12px; }
+    #results-count span { color: #58a6ff; font-weight: 600; }
+
+    .result-item {
+      border: 1px solid #21262d;
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      background: #010409;
+      transition: border-color 0.15s;
+    }
+    .result-item:hover { border-color: #30363d; }
+    .result-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: #e6edf3;
+      margin-bottom: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .result-url {
+      font-size: 10px;
+      color: #4b5563;
+      word-break: break-all;
+      margin-bottom: 8px;
+    }
+    .result-meta { display: flex; gap: 10px; flex-wrap: wrap; }
+    .badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-weight: 500;
+    }
+    .badge-onion { background: rgba(168,85,247,0.15); color: #a855f7; border: 1px solid #a855f730; }
+    .badge-clear { background: rgba(59,130,246,0.15);  color: #3b82f6; border: 1px solid #3b82f630; }
+    .badge-term  { background: rgba(34,197,94,0.15);   color: #22c55e; border: 1px solid #22c55e30; }
+    .badge-dl    { background: rgba(245,158,11,0.15);  color: #f59e0b; border: 1px solid #f59e0b30; }
+
+    #empty { font-size: 13px; color: #4b5563; text-align: center; padding: 40px 0; display: none; }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #e6edf3;
+      margin-bottom: 14px;
+    }
+  @media print {
+    body { background: #fff; color: #000; padding: 20px; overflow: auto; }
+    .card { border: 1px solid #ccc; border-radius: 4px; margin-bottom: 16px; padding: 16px; background: #fff; }
+    #stats, #legend, #search-wrap, #hint, .btn, #export-btns, #log, #error-msg, #status-bar { display: none !important; }
+    .result-item { border: 1px solid #ddd; border-radius: 4px; padding: 10px; margin-bottom: 8px; break-inside: avoid; }
+    .result-title { color: #000; font-size: 13px; font-weight: 600; }
+    .result-url { color: #555; font-size: 10px; }
+    .badge { border: 1px solid #ccc; color: #333; background: #f5f5f5; }
+    h1 { color: #000; } .subtitle { color: #555; }
+    #results-count { color: #555; margin-bottom: 8px; }
+    a { color: #000; }
+  }
+  </style>
+</head>
+<body>
+
+<h1>🕷️ RCN Search</h1>
+<p class="subtitle">Local crawler frontend — results stay on your machine</p>
+
+<!-- Config card -->
+<div class="card">
+  <div class="row">
+    <div>
+      <label>Seed URL</label>
+      <input id="url" type="text" placeholder="http://example.onion/" autocomplete="off">
+    </div>
+    <div>
+      <label>Search terms (comma separated)</label>
+      <input id="terms" type="text" placeholder="malware, exploit, leak" autocomplete="off">
+    </div>
+  </div>
+
+  <div class="row" style="margin-bottom:16px">
+    <div style="display:flex;align-items:center;gap:24px;padding-bottom:2px">
+      <div class="toggle-row" style="margin-bottom:0">
+        <label class="toggle">
+          <input type="checkbox" id="onion-only">
+          <span class="slider"></span>
+        </label>
+        <span class="toggle-label">.onion only</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:10px;align-items:center">
+    <button class="btn btn-primary" id="btn-start">▶ Start crawl</button>
+    <button class="btn btn-danger"  id="btn-stop" disabled>■ Stop</button>
+  </div>
+
+  <div id="status-bar">
+    <div id="status-dot" class="dot-idle"></div>
+    <span id="status-text">Idle</span>
+  </div>
+  <div id="error-msg" style="display:none;margin-top:10px;font-size:12px;color:#f85149;background:rgba(248,81,73,0.08);border:1px solid #f8514930;border-radius:6px;padding:8px 12px;"></div>
+</div>
+
+<!-- Log card -->
+<div class="card">
+  <div class="section-title">Live log</div>
+  <div id="log"><span class="log-sys">Waiting for crawl to start…</span></div>
+</div>
+
+<!-- Results card -->
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+    <div class="section-title" style="margin-bottom:0">Results</div>
+    <div id="export-btns" style="display:none;gap:8px;display:none">
+      <a id="btn-download" href="/api/download" class="btn" style="background:rgba(88,166,255,0.1);border:1px solid #58a6ff50;color:#58a6ff;font-size:11px;padding:6px 12px;text-decoration:none">⬇ Download JSON.gz</a>
+      <button id="btn-pdf" class="btn" style="background:rgba(245,158,11,0.1);border:1px solid #f59e0b50;color:#f59e0b;font-size:11px;padding:6px 12px">🖨 Export PDF</button>
+    </div>
+  </div>
+  <div id="results-count"></div>
+  <div id="results-list"></div>
+  <div id="empty">No results yet — start a crawl above.</div>
+</div>
+
+<script>
+let polling = null;
+let logLen  = 0;
+
+const urlEl      = document.getElementById("url");
+const termsEl    = document.getElementById("terms");
+const onionEl    = document.getElementById("onion-only");
+const btnStart   = document.getElementById("btn-start");
+const btnStop    = document.getElementById("btn-stop");
+const statusBar  = document.getElementById("status-bar");
+const statusDot  = document.getElementById("status-dot");
+const statusText = document.getElementById("status-text");
+const logEl      = document.getElementById("log");
+const resultsList  = document.getElementById("results-list");
+const resultsCount = document.getElementById("results-count");
+const emptyEl      = document.getElementById("empty");
+const exportBtns   = document.getElementById("export-btns");
+
+document.getElementById("btn-pdf").addEventListener("click", () => window.print());
+const errorMsg   = document.getElementById("error-msg");
+
+function showError(msg) {
+  errorMsg.textContent = msg;
+  errorMsg.style.display = "block";
+}
+function clearError() {
+  errorMsg.style.display = "none";
+  errorMsg.textContent = "";
+}
+
+function colorLine(line) {
+  if (/\[warn\]|\[WARN\]/i.test(line)) return `<span class="log-warn">${esc(line)}</span>`;
+  if (/\[server\]/i.test(line))        return `<span class="log-sys">${esc(line)}</span>`;
+  if (/error|fail/i.test(line))        return `<span class="log-err">${esc(line)}</span>`;
+  if (/✓|ok|success|circuit|graph/i.test(line)) return `<span class="log-ok">${esc(line)}</span>`;
+  return `<span class="log-info">${esc(line)}</span>`;
+}
+
+function esc(s) {
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+function setRunning(running) {
+  btnStart.disabled = running;
+  btnStop.disabled  = !running;
+  statusBar.classList.add("visible");
+  if (running) {
+    statusDot.className = "dot-live";
+    statusText.textContent = "Crawl running…";
+  } else {
+    statusDot.className = "dot-idle";
+    statusText.textContent = "Idle";
+  }
+}
+
+async function poll() {
+  try {
+    const [statusRes, resultsRes] = await Promise.all([
+      fetch("/api/crawl/status").then(r => r.json()),
+      fetch("/api/results").then(r => r.json()),
+    ]);
+
+    setRunning(statusRes.running);
+
+    // Update log (only new lines)
+    const newLines = statusRes.log.slice(logLen);
+    if (newLines.length) {
+      logLen = statusRes.log.length;
+      const atBottom = logEl.scrollHeight - logEl.scrollTop <= logEl.clientHeight + 20;
+      logEl.innerHTML += newLines.map(colorLine).join("\n") + "\n";
+      if (atBottom) logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    // Update results
+    const pages = resultsRes.pages ?? [];
+    resultsCount.innerHTML = pages.length
+      ? `Showing <span>${pages.length}</span> page${pages.length !== 1 ? "s" : ""}`
+      : "";
+
+    if (pages.length === 0) {
+      resultsList.innerHTML = "";
+      emptyEl.style.display = "block";
+      exportBtns.style.display = "none";
+    } else {
+      emptyEl.style.display = "none";
+      exportBtns.style.display = "flex";
+      resultsList.innerHTML = pages.map(renderPage).join("");
+    }
+
+    if (!statusRes.running) {
+      clearInterval(polling);
+      polling = null;
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+function renderPage(p) {
+  const isOnion = (p.baseHost ?? "").endsWith(".onion");
+  const terms   = (p.matchedTerms ?? []);
+  const dls     = (p.downloads ?? []);
+  const title   = p.meta?.title ?? p.url;
+
+  return `<div class="result-item">
+    <div class="result-title">${esc(title)}</div>
+    <div class="result-url">${esc(p.url)}</div>
+    <div class="result-meta">
+      ${isOnion
+        ? '<span class="badge badge-onion">.onion</span>'
+        : '<span class="badge badge-clear">clearnet</span>'}
+      ${terms.map(t => `<span class="badge badge-term">${esc(t)}</span>`).join("")}
+      ${dls.length ? `<span class="badge badge-dl">⬇ ${dls.length} downloads</span>` : ""}
+    </div>
+  </div>`;
+}
+
+btnStart.addEventListener("click", async () => {
+  const url = urlEl.value.trim();
+  if (!url) { showError("Enter a seed URL first."); urlEl.focus(); return; }
+
+  clearError();
+  logEl.innerHTML = "";
+  logLen = 0;
+  resultsList.innerHTML = "";
+  emptyEl.style.display = "none";
+
+  try {
+    const res = await fetch("/api/crawl/start", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({
+        url,
+        searchTerms: termsEl.value.trim(),
+        onionOnly:   onionEl.checked,
+        maxPages:    50,
+      }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: `Server error ${res.status}` }));
+      showError(err.error ?? "Failed to start crawl.");
+      return;
+    }
+
+    setRunning(true);
+    if (polling) clearInterval(polling);
+    polling = setInterval(poll, 2000);
+    poll();
+  } catch (err) {
+    showError(`Cannot reach server: ${err.message}`);
+  }
+});
+
+btnStop.addEventListener("click", async () => {
+  try {
+    await fetch("/api/crawl/stop", { method: "POST" });
+    statusText.textContent = "Stopping…";
+  } catch (err) {
+    showError(`Stop failed: ${err.message}`);
+  }
+});
+
+// Initial status check
+fetch("/api/crawl/status").then(r => r.json()).then(s => {
+  if (s.running) {
+    setRunning(true);
+    logLen = 0;
+    polling = setInterval(poll, 2000);
+    poll();
+  }
+});
+</script>
+</body>
+</html>

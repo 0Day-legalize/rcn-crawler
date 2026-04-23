@@ -53,6 +53,8 @@ Output → `data/results.json` · `data/visited.json` · `data/unique-links.json
 * 💣 Gzip bomb protection — dual compressed + decompressed size caps
 * 🔒 Scheme filtering — only `http:` and `https:` hrefs accepted
 * 💾 Structured JSON logging — rotating daily log files in `logs/`
+* 🗜️ Auto-compress — gzips saved pages when disk hits 50% full, repeats each time threshold is crossed
+* 🖥️ Local search UI — browser-based frontend to launch crawls, watch live logs, and export results
 
 ---
 
@@ -176,6 +178,7 @@ All settings are CLI flags. Defaults are defined in `src/config.js`.
 | `--block-domains=a.com,b.onion` | `""` | Blacklist — drop links to these domains (subdomains included) |
 | `--notify-url=URL` | `""` | POST a JSON summary to this URL when the crawl ends |
 | `--ignore-robots=true\|false` | `false` | Ignore robots.txt rules entirely |
+| `--auto-compress=true\|false` | `true` | Gzip `data/pages/` when disk hits 50% full; repeats each time |
 
 ```bash
 node src/main.js --help
@@ -302,6 +305,10 @@ The graph is written to `data/graph.html` as a self-contained file — open it i
 
 Clicking a node opens a panel showing pages crawled, successful fetches, in/out link counts, and the number of downloadable files found. If downloads exist, a toggle expands a scrollable list of every download URL as a clickable link.
 
+### Hybrid page tree
+
+The detail panel includes an **Expand pages** button. Clicking it fans out all individual pages crawled on that domain in a radial tree layout — edges show the intra-domain crawl path (BFS from seed pages). Green nodes = successful fetches, red = failed. Hover any page node to see its title and full URL. Click **Collapse pages** to fold them back. Capped at 200 page nodes per domain.
+
 > **Offline support:** On first run, D3.js is downloaded from CDN and cached to `data/d3.min.js`. All subsequent graph generations embed it inline — the graph works fully offline after the first generation.
 
 ---
@@ -371,9 +378,13 @@ rcn-crawler/
 │   │   ├── ipSafety.js           # SSRF IP range checks (IPv4 + IPv4-mapped IPv6)
 │   │   ├── notify.js             # webhook notifications (Discord / Slack / Telegram / custom)
 │   │   ├── logger.js             # structured rotating logger
+│   │   ├── diskCheck.js          # disk usage monitor — gzips pages/ when disk hits 50%
 │   │   └── compress.js           # gzip archive utilities
 │   ├── config.js                 # CLI flags + all runtime constants
+│   ├── server.js                 # local Express UI server (npm run server)
 │   └── main.js
+├── public/
+│   └── index.html                # local search UI — launch crawls, live log, export results
 ├── data/
 │   ├── results.json              # per-page crawl results (includes matchedTerms, contentHash, downloads)
 │   ├── graph.html                # interactive domain connection map (auto-generated on exit)
@@ -388,6 +399,29 @@ rcn-crawler/
 ├── urls.txt
 └── package.json
 ```
+
+---
+
+## 🖥️ Local Search UI
+
+A browser-based frontend for launching and monitoring crawls without touching the terminal.
+
+```bash
+npm run server
+# → http://localhost:3000
+```
+
+Features:
+- Enter a seed URL and optional search terms
+- Toggle `.onion only` mode
+- Capped at 50 pages per crawl
+- Live log streams from the crawler process
+- Results panel shows matching pages with badges for onion/clearnet, matched terms, and downloads
+- **Stop** button sends a clean SIGINT — state is saved, graph is generated
+- **⬇ Download JSON.gz** — exports filtered results as a gzipped JSON file (named with timestamp)
+- **🖨 Export PDF** — browser print dialog with a clean print stylesheet (no UI chrome, results only)
+
+> The server only listens on `127.0.0.1` — it is not accessible from other machines.
 
 ---
 
@@ -420,8 +454,10 @@ rcn-crawler/
 ✅ Puppeteer crash recovery — auto-relaunch and retry on browser crash
 ✅ Exit summary — ✓ ok  ✗ failed  ⊘ blocked  📄 unique pages
 ✅ Offline graph — D3.js bundled inline after first download
+✅ Hybrid graph — click domain to expand page-level radial tree, collapse back
+✅ Auto-compress — gzip pages/ at 50% disk usage, repeat each threshold crossing
+✅ Local search UI — browser frontend with live log, results, download/PDF export
 🔲 Docker support (containerized crawler runtime)
-🔲 Kata Containers integration (secure, isolated execution)
 🔲 Crawl metrics dashboard
 🔲 Captcha bypass
 🔲 Distributed crawling (multiple workers / nodes)

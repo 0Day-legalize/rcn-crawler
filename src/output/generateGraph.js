@@ -2,7 +2,7 @@
 /**
  * @file generateGraph.js
  * @description Reads data/results.json and writes data/graph.html —
- * an interactive force-directed domain connection map.
+ * an interactive force-directed domain connection map with expandable page trees.
  *
  * Usage:
  *   node src/output/generateGraph.js
@@ -20,13 +20,6 @@ const OUTPUT_PATH  = path.join(DATA_DIR, "graph.html");
 const D3_CACHE     = path.join(DATA_DIR, "d3.min.js");
 const D3_CDN       = "https://d3js.org/d3.v7.min.js";
 
-/**
- * Returns the D3 source — from local cache if available, otherwise downloads
- * it once from CDN and caches to data/d3.min.js for offline use.
- * Falls back to a CDN <script> tag if the download fails.
- *
- * @returns {Promise<{inline: string|null, cdnUrl: string|null}>}
- */
 async function getD3() {
     if (fs.existsSync(D3_CACHE)) {
         return { inline: fs.readFileSync(D3_CACHE, "utf-8"), cdnUrl: null };
@@ -45,16 +38,7 @@ async function getD3() {
     });
 }
 
-// ─── Core generation function ─────────────────────────────────────────────────
-
-/**
- * Reads results.json and writes graph.html.
- * Returns true on success, false if data is missing or insufficient.
- *
- * @returns {Promise<boolean>}
- */
 async function generateGraph() {
-// ─── Load data ────────────────────────────────────────────────────────────────
 
 if (!fs.existsSync(RESULTS_PATH)) {
     console.error(`results.json not found at ${RESULTS_PATH}`);
@@ -75,11 +59,9 @@ if (pages.length === 0) {
     return false;
 }
 
-// ─── Build graph ──────────────────────────────────────────────────────────────
+// ─── Build domain graph ───────────────────────────────────────────────────────
 
-/** @type {Map<string, {id:string, pages:number, successPages:number, isOnion:boolean}>} */
 const nodeMap = new Map();
-/** @type {Map<string, {source:string, target:string, count:number}>} */
 const edgeMap = new Map();
 
 function ensureNode(domain) {
@@ -90,11 +72,15 @@ function ensureNode(domain) {
             successPages: 0,
             isOnion:      domain.endsWith(".onion"),
             title:        null,
-            downloads:    [],   // deduplicated download URLs found on this domain
+            downloads:    [],
         });
     }
     return nodeMap.get(domain);
 }
+
+// ─── Build per-domain page tree data ─────────────────────────────────────────
+
+const pagesByDomain = {};
 
 for (const page of pages) {
     if (!page.baseHost) continue;
@@ -104,7 +90,6 @@ for (const page of pages) {
     if (page.success) node.successPages++;
     if (!node.title && page.meta?.title) node.title = page.meta.title;
 
-    // Collect download URLs, deduplicating across pages of the same domain
     for (const dl of (page.downloads ?? [])) {
         if (!node.downloads.includes(dl)) node.downloads.push(dl);
     }
@@ -114,14 +99,25 @@ for (const page of pages) {
             const targetHost = new URL(link).hostname.toLowerCase();
             if (targetHost === page.baseHost) continue;
             ensureNode(targetHost);
-
             const key = `${page.baseHost}→${targetHost}`;
-            if (!edgeMap.has(key)) {
-                edgeMap.set(key, { source: page.baseHost, target: targetHost, count: 0 });
-            }
+            if (!edgeMap.has(key)) edgeMap.set(key, { source: page.baseHost, target: targetHost, count: 0 });
             edgeMap.get(key).count++;
         } catch { /* skip malformed */ }
     }
+
+    if (!page.success) continue;
+
+    if (!pagesByDomain[page.baseHost]) pagesByDomain[page.baseHost] = [];
+    const intraLinks = (page.links ?? []).filter(l => {
+        try { return new URL(l).hostname.toLowerCase() === page.baseHost; }
+        catch { return false; }
+    });
+    pagesByDomain[page.baseHost].push({
+        url:        page.url,
+        title:      page.meta?.title ?? null,
+        success:    true,
+        intraLinks,
+    });
 }
 
 const nodes = [...nodeMap.values()];
@@ -134,9 +130,9 @@ const meta = {
     totalEdges:   links.length,
 };
 
-const graphData = JSON.stringify({ nodes, links, meta });
+const graphData = JSON.stringify({ nodes, links, meta, pagesByDomain });
 
-// ─── D3 source (inline if available, CDN fallback) ────────────────────────────
+// ─── D3 source ────────────────────────────────────────────────────────────────
 
 const d3 = await getD3();
 const d3ScriptTag = d3.inline
@@ -165,27 +161,22 @@ const html = `<!DOCTYPE html>
 
     #canvas { display: block; width: 100vw; height: 100vh; }
 
-    /* ── Nodes ── */
     .node { cursor: pointer; }
-    .node circle {
-      stroke-width: 1.5;
-      transition: stroke-width 0.15s;
-    }
-    .node text {
-      fill: #94a3b8;
-      font-size: 10px;
-      pointer-events: none;
-      user-select: none;
-    }
+    .node circle { stroke-width: 1.5; transition: stroke-width 0.15s; }
+    .node text { fill: #94a3b8; font-size: 10px; pointer-events: none; user-select: none; }
     .node.highlighted circle { stroke-width: 3; filter: drop-shadow(0 0 6px currentColor); }
     .node.dimmed { opacity: 0.12; }
+    .node.expanded circle { stroke-dasharray: 5,3; }
 
-    /* ── Links ── */
     .link { fill: none; transition: stroke-opacity 0.15s; }
     .link.highlighted { stroke-opacity: 0.9 !important; }
     .link.dimmed      { stroke-opacity: 0.04 !important; }
 
-    /* ── Panels ── */
+    .page-link { fill: none; pointer-events: none; }
+    .page-node-g { cursor: default; }
+    .page-node-g circle { transition: r 0.1s; }
+    .page-node-g:hover circle { r: 6; }
+
     .panel {
       position: fixed;
       background: rgba(13, 17, 23, 0.88);
@@ -211,16 +202,27 @@ const html = `<!DOCTYPE html>
     #detail-close:hover { color: #e6edf3; }
     #detail .row { font-size: 12px; color: #8b949e; line-height: 2; display: flex; justify-content: space-between; gap: 16px; }
     #detail .row span { color: #58a6ff; font-weight: 500; }
-    #detail .badge {
-      display: inline-block;
-      padding: 1px 8px;
-      border-radius: 12px;
-      font-size: 10px;
-      font-weight: 500;
-      margin-top: 6px;
+    #detail .badge { display: inline-block; padding: 1px 8px; border-radius: 12px; font-size: 10px; font-weight: 500; margin-top: 6px; }
+    .badge-onion { background: rgba(168,85,247,0.2); color: #a855f7; border: 1px solid #a855f760; }
+    .badge-clear { background: rgba(59,130,246,0.2);  color: #3b82f6; border: 1px solid #3b82f660; }
+
+    #expand-btn {
+      margin-top: 12px;
+      width: 100%;
+      background: rgba(34,197,94,0.08);
+      border: 1px solid #22c55e50;
+      border-radius: 6px;
+      color: #22c55e;
+      font-size: 11px;
+      padding: 6px 10px;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.15s;
     }
-    .badge-onion  { background: rgba(168,85,247,0.2); color: #a855f7; border: 1px solid #a855f760; }
-    .badge-clear  { background: rgba(59,130,246,0.2);  color: #3b82f6; border: 1px solid #3b82f660; }
+    #expand-btn:hover { background: rgba(34,197,94,0.18); }
+    #expand-btn.active { background: rgba(239,68,68,0.08); border-color: #ef444450; color: #ef4444; }
+    #expand-btn.active:hover { background: rgba(239,68,68,0.18); }
+    #expand-btn:disabled { opacity: 0.35; cursor: default; }
 
     #dl-toggle {
       display: flex; align-items: center; gap: 6px;
@@ -236,23 +238,10 @@ const html = `<!DOCTYPE html>
       border: 1px solid #21262d; border-radius: 6px;
       padding: 6px 8px;
     }
-    #dl-list a {
-      display: block; font-size: 10px; color: #8b949e;
-      word-break: break-all; line-height: 1.6;
-      text-decoration: none;
-    }
+    #dl-list a { display: block; font-size: 10px; color: #8b949e; word-break: break-all; line-height: 1.6; text-decoration: none; }
     #dl-list a:hover { color: #e6edf3; }
 
-    #hint {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      font-size: 10px;
-      color: #374151;
-      text-align: right;
-      line-height: 1.9;
-      pointer-events: none;
-    }
+    #hint { position: fixed; bottom: 20px; right: 20px; font-size: 10px; color: #374151; text-align: right; line-height: 1.9; pointer-events: none; }
 
     #tooltip {
       position: fixed;
@@ -265,15 +254,11 @@ const html = `<!DOCTYPE html>
       opacity: 0;
       transition: opacity 0.1s;
       z-index: 50;
-      max-width: 220px;
+      max-width: 260px;
+      word-break: break-all;
     }
 
-    #search-wrap {
-      position: fixed;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-    }
+    #search-wrap { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); }
     #search {
       background: rgba(22,27,34,0.92);
       border: 1px solid #30363d;
@@ -292,7 +277,6 @@ const html = `<!DOCTYPE html>
 <body>
 
 <svg id="canvas"></svg>
-
 <div id="tooltip"></div>
 
 <div id="stats" class="panel">
@@ -309,7 +293,9 @@ const html = `<!DOCTYPE html>
   <div class="item" style="margin-top:6px"><div class="dot" style="background:#15803d;border-radius:2px;height:3px;width:14px;margin-right:4px"></div>Cross-domain link</div>
   <div class="item"><div class="dot" style="background:#22c55e;border-radius:2px;height:3px;width:14px;margin-right:4px"></div>Outgoing (selected)</div>
   <div class="item"><div class="dot" style="background:#f59e0b;border-radius:2px;height:3px;width:14px;margin-right:4px"></div>Incoming (selected)</div>
-  <div class="item" style="margin-top:6px;font-size:10px;color:#4b5563">Node size = pages crawled</div>
+  <div class="item" style="margin-top:6px"><div class="dot" style="background:#22c55e"></div>Page — success (expanded)</div>
+  <div class="item"><div class="dot" style="background:#ef4444"></div>Page — failed (expanded)</div>
+  <div class="item" style="margin-top:4px;font-size:10px;color:#4b5563">Node size = pages crawled</div>
 </div>
 
 <div id="detail" class="panel">
@@ -325,6 +311,7 @@ const html = `<!DOCTYPE html>
     <div class="row">Links in      <span id="d-in"></span></div>
     <div class="row">Downloads     <span id="d-downloads"></span></div>
   </div>
+  <button id="expand-btn" disabled>📄 No page data</button>
   <div id="dl-toggle" style="display:none">
     <span class="arrow">▶</span> Show downloads
   </div>
@@ -337,13 +324,13 @@ const html = `<!DOCTYPE html>
 
 <div id="hint">
   Scroll to zoom · Drag to pan<br>
-  Click node for details · Drag node to pin
+  Click node for details · Drag node to pin<br>
+  Expand button → show page tree
 </div>
 
 <script>
 const DATA = ${graphData};
-
-const { nodes, links, meta } = DATA;
+const { nodes, links, meta, pagesByDomain } = DATA;
 
 // ── Stats panel ───────────────────────────────────────────────────────────────
 document.getElementById("s-domains").textContent = meta.totalDomains.toLocaleString();
@@ -364,10 +351,10 @@ for (const l of links) {
 const maxPages = d3.max(nodes, d => d.pages) || 1;
 const maxCount = d3.max(links, d => d.count) || 1;
 
-const radius  = d => Math.max(5, Math.min(32, 5 + Math.sqrt(d.pages / maxPages) * 27));
-const color   = d => d.isOnion ? "#a855f7" : "#3b82f6";
-const eWidth  = d => 0.4 + (d.count / maxCount) * 2.5;
-const eOpacity= d => 0.15 + (d.count / maxCount) * 0.45;
+const radius   = d => Math.max(5, Math.min(32, 5 + Math.sqrt(d.pages / maxPages) * 27));
+const color    = d => d.isOnion ? "#a855f7" : "#3b82f6";
+const eWidth   = d => 0.4 + (d.count / maxCount) * 2.5;
+const eOpacity = d => 0.15 + (d.count / maxCount) * 0.45;
 
 // ── SVG ───────────────────────────────────────────────────────────────────────
 const svg = d3.select("#canvas");
@@ -376,7 +363,6 @@ svg.attr("width", W).attr("height", H);
 
 const g = svg.append("g");
 
-// Arrow markers
 const defs = svg.append("defs");
 for (const [id, clr] of [["default","#15803d"],["out","#22c55e"],["in","#f59e0b"],["onion","#a855f7"],["clear","#3b82f6"]]) {
   defs.append("marker")
@@ -430,8 +416,6 @@ node.append("circle")
 node.append("text")
   .attr("dy",          d => radius(d) + 14)
   .attr("text-anchor", "middle")
-  .attr("fill",        "#94a3b8")
-  .attr("font-size",   "10px")
   .text(d => d.id.length > 24 ? d.id.slice(0, 22) + "…" : d.id);
 
 node.append("text")
@@ -458,6 +442,135 @@ node
   .on("mousemove", e => tooltip.style("left", (e.clientX+14)+"px").style("top", (e.clientY-34)+"px"))
   .on("mouseout",  () => tooltip.style("opacity", 0));
 
+// ── Page tree expand/collapse ─────────────────────────────────────────────────
+
+const expandedDomains = new Map(); // domainId → d3 group selection
+let currentExpandDomain = null;   // which domain the detail panel is showing
+
+function buildTree(domainPages) {
+  const byUrl   = new Map(domainPages.map(p => [p.url, { ...p, kids: [] }]));
+  const claimed = new Set();
+
+  for (const [url, page] of byUrl) {
+    for (const link of (page.intraLinks ?? [])) {
+      if (byUrl.has(link) && !claimed.has(link) && link !== url) {
+        byUrl.get(url).kids.push(link);
+        claimed.add(link);
+      }
+    }
+  }
+
+  const roots = [...byUrl.values()].filter(p => !claimed.has(p.url));
+  if (roots.length === 0) roots.push([...byUrl.values()][0]);
+
+  function makeNode(url, seen) {
+    if (seen.has(url)) return null;
+    const next = new Set(seen); next.add(url);
+    const p = byUrl.get(url);
+    return {
+      url:      p.url,
+      title:    p.title,
+      success:  p.success,
+      children: (p.kids ?? []).map(c => makeNode(c, next)).filter(Boolean),
+    };
+  }
+
+  const rootData = roots.length === 1
+    ? makeNode(roots[0].url, new Set())
+    : { url: "__root__", title: null, success: true,
+        children: roots.map(r => makeNode(r.url, new Set())).filter(Boolean) };
+
+  return d3.hierarchy(rootData, d => d.children?.length ? d.children : null);
+}
+
+function expandDomain(domainId, domainDatum) {
+  if (expandedDomains.has(domainId)) {
+    collapseDomain(domainId);
+    return;
+  }
+
+  const raw = (pagesByDomain[domainId] ?? []).slice(0, 200);
+  if (raw.length === 0) return;
+
+  const hier = buildTree(raw);
+  const R    = Math.max(90, 30 + raw.length * 12);
+
+  d3.tree().size([2 * Math.PI, R])(hier);
+
+  // Convert polar → cartesian relative to domain node position
+  hier.each(n => {
+    n.cx = domainDatum.x + n.y * Math.cos(n.x - Math.PI / 2);
+    n.cy = domainDatum.y + n.y * Math.sin(n.x - Math.PI / 2);
+  });
+
+  // Insert layer behind the domain nodes group
+  const grp = g.insert("g", ".nodes")
+    .attr("class", "domain-expand")
+    .style("opacity", 0);
+
+  // Intra-domain tree edges
+  grp.selectAll(".page-link")
+    .data(hier.links().filter(l => l.source.data.url !== "__root__"))
+    .join("line")
+    .attr("class", "page-link")
+    .attr("x1", d => d.source.cx).attr("y1", d => d.source.cy)
+    .attr("x2", d => d.target.cx).attr("y2", d => d.target.cy)
+    .attr("stroke", "#1e3a2e")
+    .attr("stroke-width", 0.8)
+    .attr("stroke-opacity", 0.8);
+
+  // Page nodes
+  const pgNodes = grp.selectAll(".page-node-g")
+    .data(hier.descendants().filter(d => d.data.url !== "__root__"))
+    .join("g")
+    .attr("class", "page-node-g")
+    .attr("transform", d => \`translate(\${d.cx},\${d.cy})\`);
+
+  pgNodes.append("circle")
+    .attr("r",           4)
+    .attr("fill",        d => d.data.success ? "#22c55e22" : "#ef444422")
+    .attr("stroke",      d => d.data.success ? "#22c55e"   : "#ef4444")
+    .attr("stroke-width", 1);
+
+  pgNodes.append("text")
+    .attr("dy", -8)
+    .attr("text-anchor", "middle")
+    .attr("fill",      "#4b5563")
+    .attr("font-size", "7px")
+    .text(d => {
+      try {
+        const p = new URL(d.data.url).pathname;
+        return p === "/" ? "/" : (p.length > 22 ? "…" + p.slice(-20) : p);
+      } catch { return ""; }
+    });
+
+  pgNodes
+    .on("mouseover", (e, d) => {
+      tooltip.style("opacity", 1).html(
+        \`<strong style="color:#e6edf3">\${d.data.title ?? "(no title)"}</strong><br>
+         <span style="color:#6b7280;font-size:9px">\${d.data.url}</span>\`
+      );
+    })
+    .on("mousemove", e => tooltip.style("left", (e.clientX+14)+"px").style("top", (e.clientY-34)+"px"))
+    .on("mouseout",  () => tooltip.style("opacity", 0));
+
+  // Fade in
+  grp.transition().duration(300).style("opacity", 1);
+
+  // Mark domain node as expanded (dashed stroke)
+  node.filter(n => n.id === domainId).classed("expanded", true);
+
+  expandedDomains.set(domainId, grp);
+}
+
+function collapseDomain(domainId) {
+  const grp = expandedDomains.get(domainId);
+  if (!grp) return;
+  grp.transition().duration(200).style("opacity", 0).remove();
+  expandedDomains.delete(domainId);
+  node.filter(n => n.id === domainId).classed("expanded", false);
+}
+
 // ── Click: highlight + detail panel ──────────────────────────────────────────
 let selected = null;
 
@@ -465,6 +578,7 @@ node.on("click", (e, d) => {
   e.stopPropagation();
   if (selected === d.id) { clearSelection(); return; }
   selected = d.id;
+  currentExpandDomain = d.id;
 
   const neighbours = new Set([d.id]);
   links.forEach(l => {
@@ -482,8 +596,8 @@ node.on("click", (e, d) => {
     .classed("highlighted", l => { const s=l.source.id??l.source, t=l.target.id??l.target; return s===d.id||t===d.id; })
     .attr("stroke", l => {
       const s=l.source.id??l.source, t=l.target.id??l.target;
-      if (s===d.id) return "#22c55e"; // outgoing → bright green
-      if (t===d.id) return "#f59e0b"; // incoming → amber
+      if (s===d.id) return "#22c55e";
+      if (t===d.id) return "#f59e0b";
       return "#15803d";
     })
     .attr("marker-end", l => {
@@ -493,10 +607,11 @@ node.on("click", (e, d) => {
       return "url(#arrow-default)";
     });
 
+  // Detail panel
   const panel = document.getElementById("detail");
   panel.style.display = "block";
-  document.getElementById("detail-host").textContent    = d.id;
-  document.getElementById("detail-badge").innerHTML     = d.isOnion
+  document.getElementById("detail-host").textContent = d.id;
+  document.getElementById("detail-badge").innerHTML  = d.isOnion
     ? '<span class="badge badge-onion">.onion hidden service</span>'
     : '<span class="badge badge-clear">Clearnet</span>';
   document.getElementById("d-pages").textContent     = d.pages;
@@ -504,6 +619,22 @@ node.on("click", (e, d) => {
   document.getElementById("d-out").textContent       = outDegree.get(d.id) || 0;
   document.getElementById("d-in").textContent        = inDegree.get(d.id)  || 0;
   document.getElementById("d-downloads").textContent = (d.downloads ?? []).length;
+
+  // Expand button
+  const expandBtn = document.getElementById("expand-btn");
+  const domainPages = pagesByDomain[d.id] ?? [];
+  if (domainPages.length === 0) {
+    expandBtn.disabled = true;
+    expandBtn.textContent = "📄 No page data";
+    expandBtn.classList.remove("active");
+  } else {
+    expandBtn.disabled = false;
+    const isExpanded = expandedDomains.has(d.id);
+    expandBtn.classList.toggle("active", isExpanded);
+    expandBtn.textContent = isExpanded
+      ? \`🌿 Collapse pages (\${Math.min(domainPages.length, 200)})\`
+      : \`📄 Expand pages (\${Math.min(domainPages.length, 200)}\${domainPages.length > 200 ? ", capped" : ""})\`;
+  }
 
   // Downloads toggle
   const dlToggle = document.getElementById("dl-toggle");
@@ -518,10 +649,7 @@ node.on("click", (e, d) => {
     dlToggle.childNodes[1].textContent = \` Show downloads (\${dls.length})\`;
     for (const url of dls) {
       const a = document.createElement("a");
-      a.href = url;
-      a.textContent = url;
-      a.target = "_blank";
-      a.rel = "noopener noreferrer";
+      a.href = url; a.textContent = url; a.target = "_blank"; a.rel = "noopener noreferrer";
       dlList.appendChild(a);
     }
   } else {
@@ -529,19 +657,36 @@ node.on("click", (e, d) => {
   }
 });
 
+// Expand button click
+document.getElementById("expand-btn").addEventListener("click", () => {
+  if (!currentExpandDomain) return;
+  const d = nodes.find(n => n.id === currentExpandDomain);
+  if (!d) return;
+  expandDomain(currentExpandDomain, d);
+
+  const expandBtn = document.getElementById("expand-btn");
+  const domainPages = pagesByDomain[currentExpandDomain] ?? [];
+  const isExpanded = expandedDomains.has(currentExpandDomain);
+  expandBtn.classList.toggle("active", isExpanded);
+  expandBtn.textContent = isExpanded
+    ? \`🌿 Collapse pages (\${Math.min(domainPages.length, 200)})\`
+    : \`📄 Expand pages (\${Math.min(domainPages.length, 200)}\${domainPages.length > 200 ? ", capped" : ""})\`;
+});
+
 document.getElementById("dl-toggle").addEventListener("click", function () {
   const dlList = document.getElementById("dl-list");
   const open   = dlList.style.display === "block";
-  dlList.style.display            = open ? "none" : "block";
-  this.classList.toggle("open",   !open);
+  dlList.style.display = open ? "none" : "block";
+  this.classList.toggle("open", !open);
   this.querySelector(".arrow").textContent = open ? "▶" : "▼";
-  this.childNodes[1].textContent  = open
+  this.childNodes[1].textContent = open
     ? \` Show downloads (\${document.querySelectorAll("#dl-list a").length})\`
     : \` Hide downloads (\${document.querySelectorAll("#dl-list a").length})\`;
 });
 
 function clearSelection() {
   selected = null;
+  currentExpandDomain = null;
   node.classed("dimmed", false).classed("highlighted", false);
   link.classed("dimmed", false).classed("highlighted", false)
       .attr("stroke", "#15803d")
@@ -558,40 +703,29 @@ document.getElementById("detail-close").addEventListener("click", clearSelection
 document.getElementById("search").addEventListener("input", function () {
   const q = this.value.trim().toLowerCase();
   if (!q) { clearSelection(); return; }
-
   const match = nodes.find(n => n.id.toLowerCase().includes(q));
   if (!match) return;
-
-  // Centre view on matching node after a tick
   simulation.tick();
-  const t = d3.zoomTransform(svg.node());
-  const x = match.x ?? W / 2;
-  const y = match.y ?? H / 2;
+  const x = match.x ?? W / 2, y = match.y ?? H / 2;
   svg.transition().duration(600).call(
     d3.zoom().transform,
     d3.zoomIdentity.translate(W/2 - x, H/2 - y)
   );
-
-  // Simulate click
-  const datum = node.data().find(n => n.id === match.id);
-  if (datum) node.filter(n => n.id === match.id).dispatch("click");
+  node.filter(n => n.id === match.id).dispatch("click");
 });
 
 // ── Tick ──────────────────────────────────────────────────────────────────────
 simulation.on("tick", () => {
   link
-    .attr("x1", d => d.source.x)
-    .attr("y1", d => d.source.y)
+    .attr("x1", d => d.source.x).attr("y1", d => d.source.y)
     .attr("x2", d => {
       const dx = d.target.x - d.source.x, dy = d.target.y - d.source.y;
-      const dist = Math.sqrt(dx*dx + dy*dy) || 1;
-      const r = radius(d.target);
+      const dist = Math.sqrt(dx*dx + dy*dy) || 1, r = radius(d.target);
       return d.target.x - (dx / dist) * (r + 9);
     })
     .attr("y2", d => {
       const dx = d.target.x - d.source.x, dy = d.target.y - d.source.y;
-      const dist = Math.sqrt(dx*dx + dy*dy) || 1;
-      const r = radius(d.target);
+      const dist = Math.sqrt(dx*dx + dy*dy) || 1, r = radius(d.target);
       return d.target.y - (dy / dist) * (r + 9);
     });
 
@@ -613,18 +747,15 @@ window.addEventListener("resize", () => {
 </body>
 </html>`;
 
-// ─── Write output ─────────────────────────────────────────────────────────────
-
 fs.writeFileSync(OUTPUT_PATH, html, "utf-8");
 console.log(`Graph written → ${OUTPUT_PATH}`);
 console.log(`  ${nodes.length} domains  ·  ${links.length} connections  ·  ${meta.totalPages} pages`);
 console.log(`Open in a browser: xdg-open ${OUTPUT_PATH}`);
 return true;
-} // end generateGraph()
+}
 
 module.exports = { generateGraph };
 
-// CLI entry point
 if (require.main === module) {
     generateGraph().then(ok => { if (!ok) process.exit(1); });
 }
